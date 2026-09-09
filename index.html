@@ -170,6 +170,9 @@ function toArabicNum(n) {
     : ('' + n);
 }
 function softMix(c, p) { return 'color-mix(in srgb, ' + c + ' ' + p + '%, #FFF)'; }
+/* Tint that blends into the current surface, so it stays attractive in
+   both light and dark mode and shifts with the active palette. */
+function tintSurf(c, p) { return 'color-mix(in srgb, ' + c + ' ' + p + '%, var(--surf,#FFF))'; }
 function esc(s) { return ('' + s).replace(/"/g, '&quot;'); }
 
 /* The Lamha logo mark (colors driven by CSS vars) */
@@ -219,11 +222,11 @@ function computeVals() {
       badge: badge(n.bK),
       badgeBg: urgent ? pal.ink : worth ? pal.ac : 'transparent',
       badgeColor: urgent ? '#FFF' : '#231708',
-      bg: urgent ? softMix(pal.ink, 8) : worth ? softMix(pal.ac, 12) : 'var(--surf,#FFF)',
-      border: urgent ? softMix(pal.ink, 32) : worth ? softMix(pal.ac, 38) : 'var(--line,#EFE8DC)',
+      bg: urgent ? tintSurf(pal.ink, 15) : worth ? tintSurf(pal.ac, 20) : tintSurf(c, 13),
+      border: urgent ? tintSurf(pal.ink, 36) : worth ? tintSurf(pal.ac, 44) : tintSurf(c, 30),
       time2: (n[lang === 'ar' ? 'tAr' : 'tEn']) || t.today,
       unread: unreadIds.indexOf(n.id) !== -1,
-      rail: unreadIds.indexOf(n.id) !== -1 ? pal.pr : 'transparent'
+      rail: unreadIds.indexOf(n.id) !== -1 ? pal.pr : c
     };
   };
 
@@ -609,7 +612,7 @@ function screenList(v) {
   } else {
     var items = v.listNotifs.map(function (n) {
       var dot = n.unread ? '<span style="width:8px;height:8px;border-radius:50%;background:var(--pr,#0F7A5A);"></span>' : '';
-      return '<button data-act="openNotif" data-id="' + n.id + '" style="text-align:start; border:none; background:var(--surf,#FFF); border-radius:16px; padding:13px; display:flex; align-items:center; gap:11px; cursor:pointer; border-inline-start:3px solid ' + n.rail + '; animation:lm-slide .2s ease;">'
+      return '<button data-act="openNotif" data-id="' + n.id + '" style="text-align:start; border:1px solid ' + n.border + '; background:' + n.bg + '; border-radius:16px; padding:13px; display:flex; align-items:center; gap:11px; cursor:pointer; border-inline-start:3px solid ' + n.rail + '; animation:lm-slide .2s ease;">'
         + '<div style="width:40px;height:40px;border-radius:12px;background:' + n.avBg + ';color:' + n.avColor + ';display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">' + n.initial + '</div>'
         + '<div style="flex:1; display:flex; flex-direction:column; gap:2px; min-width:0;"><span style="font-size:13px;font-weight:600;color:var(--txt,#10221B);">' + n.sub + '</span><span style="font-size:12px;color:var(--sub,#4A5B52);">' + n.title + '</span></div>'
         + '<div style="display:flex; flex-direction:column; align-items:flex-start; gap:5px; flex-shrink:0;"><span style="font-size:10px;color:var(--sub,#8A968F);">' + n.time2 + '</span>' + dot + '</div>'
