@@ -70,25 +70,58 @@ var PALETTES = [
 
 /* --------------------------- Domains ------------------------------ */
 var DOMAINS = [
-  { key:'all', icon:'grid', count:7, ar:'الكل', en:'All' },
-  { key:'banks', icon:'bank', count:3, ar:'بنوك', en:'Banks' },
-  { key:'telecom', icon:'telecom', count:1, ar:'اتصالات', en:'Telecom' },
-  { key:'shop', icon:'shop', count:1, ar:'تسوّق', en:'Shopping' },
-  { key:'delivery', icon:'delivery', count:1, ar:'توصيل', en:'Delivery' },
-  { key:'health', icon:'health', count:1, ar:'صحة', en:'Health' },
-  { key:'travel', icon:'travel', count:1, ar:'سفر', en:'Travel' }
+  { key:'all', icon:'grid', count:30, ar:'الكل', en:'All', groupAr:'كل شيء', groupEn:'Everything', lastAr:'منذ ساعة', lastEn:'1h ago' },
+  { key:'banks', icon:'bank', count:5, ar:'بنوك', en:'Banks', groupAr:'أموالك', groupEn:'Your money', lastAr:'منذ ساعة', lastEn:'1h ago' },
+  { key:'telecom', icon:'telecom', count:5, ar:'اتصالات', en:'Telecom', groupAr:'اتصالاتك', groupEn:'Telecom', lastAr:'منذ ٤ ساعات', lastEn:'4h ago' },
+  { key:'shop', icon:'shop', count:5, ar:'تسوّق', en:'Shopping', groupAr:'مشترياتك', groupEn:'Shopping', lastAr:'منذ ساعتين', lastEn:'2h ago' },
+  { key:'delivery', icon:'delivery', count:5, ar:'توصيل', en:'Delivery', groupAr:'طلباتك', groupEn:'Your orders', lastAr:'منذ ٣٠ دقيقة', lastEn:'30m ago' },
+  { key:'health', icon:'health', count:5, ar:'صحة', en:'Health', groupAr:'مواعيدك', groupEn:'Appointments', lastAr:'أمس', lastEn:'Yesterday' },
+  { key:'travel', icon:'travel', count:5, ar:'سفر', en:'Travel', groupAr:'رحلاتك', groupEn:'Your trips', lastAr:'أمس', lastEn:'Yesterday' }
 ];
 
 /* ------------------------- Notifications -------------------------- */
 var NOTIFS = [
-  { id:'bank', domains:['all','banks'], iAr:'ب', iEn:'A', bK:'urgent', titleAr:'تحديث بيانات الحساب', titleEn:'Update your account details', subAr:'البنك الأهلي', subEn:'Al Ahli Bank', tAr:'منذ ساعة', tEn:'1h ago' },
-  { id:'deposit', domains:['all','banks'], iAr:'ت', iEn:'D', bK:'', titleAr:'تم إيداع مبلغ SAR 2,450', titleEn:'Deposit of SAR 2,450', subAr:'البنك الأهلي', subEn:'Al Ahli Bank', tAr:'٩ سبتمبر', tEn:'9 Sep' },
-  { id:'card', domains:['all','banks'], iAr:'ح', iEn:'m', bK:'', titleAr:'عملية شراء بالبطاقة', titleEn:'Card purchase', subAr:'مدى · SAR 320', subEn:'mada · SAR 320', tAr:'منذ ٣ ساعات', tEn:'3h ago' },
-  { id:'health', domains:['all','health'], iAr:'ص', iEn:'H', bK:'urgent', titleAr:'تذكير موعد العيادة', titleEn:'Clinic appointment reminder', subAr:'مستشفى الملك فيصل · غدًا ٤ م', subEn:'KFSH · Tomorrow 4 PM', tAr:'أمس', tEn:'Yesterday' },
-  { id:'offer', domains:['all','shop'], iAr:'أ', iEn:'a', bK:'worth', titleAr:'خصم ٢٥٪ لفترة محدودة', titleEn:'25% off for a limited time', subAr:'أمازون · ينتهي اليوم', subEn:'Amazon · Ends today', tAr:'', tEn:'' },
-  { id:'telecom', domains:['all','telecom'], iAr:'S', iEn:'S', bK:'', titleAr:'فاتورتك جاهزة · SAR 210', titleEn:'Your bill is ready · SAR 210', subAr:'STC', subEn:'STC', tAr:'منذ ٤ ساعات', tEn:'4h ago' },
-  { id:'ship', domains:['all','delivery'], iAr:'أ', iEn:'A', bK:'', titleAr:'تم شحن طلبك', titleEn:'Your order has shipped', subAr:'أرامكس · يصل غدًا', subEn:'Aramex · Arrives tomorrow', tAr:'منذ ٥ ساعات', tEn:'5h ago' },
-  { id:'travel', domains:['all','travel'], iAr:'ط', iEn:'f', bK:'', titleAr:'عرض رحلات جديد', titleEn:'New flight deal', subAr:'طيران ناس', subEn:'flynas', tAr:'أمس', tEn:'Yesterday' }
+  /* ---------------- أموالك · Banks (5) ---------------- */
+  { id:'bank', domains:['all','banks'], iAr:'ب', iEn:'A', bK:'urgent', read:false, titleAr:'تحديث بيانات الحساب', titleEn:'Update your account details', subAr:'البنك الأهلي', subEn:'Al Ahli Bank', bodyAr:'يرجى تحديث بياناتك قبل ٣٠ سبتمبر لتفادي إيقاف الخدمة مؤقتًا.', bodyEn:'Please update your details before 30 Sep to avoid a temporary hold.', tAr:'منذ ساعة', tEn:'1h ago' },
+  { id:'deposit', domains:['all','banks'], iAr:'ت', iEn:'D', bK:'', read:true, titleAr:'تم إيداع مبلغ SAR 2,450', titleEn:'Deposit of SAR 2,450', subAr:'البنك الأهلي', subEn:'Al Ahli Bank', bodyAr:'أُودع مبلغ SAR 2,450 في حسابك الجاري.', bodyEn:'SAR 2,450 was deposited into your current account.', tAr:'٩ سبتمبر', tEn:'9 Sep' },
+  { id:'card', domains:['all','banks'], iAr:'ح', iEn:'m', bK:'', read:true, titleAr:'عملية شراء بالبطاقة · SAR 320', titleEn:'Card purchase · SAR 320', subAr:'مدى', subEn:'mada', bodyAr:'عملية شراء بقيمة SAR 320 لدى أحد المتاجر.', bodyEn:'A SAR 320 purchase was made at a merchant.', tAr:'منذ ٣ ساعات', tEn:'3h ago' },
+  { id:'stmt', domains:['all','banks'], iAr:'ك', iEn:'S', bK:'', read:true, titleAr:'كشف حساب أغسطس جاهز', titleEn:'August statement is ready', subAr:'البنك الأهلي', subEn:'Al Ahli Bank', bodyAr:'كشف حسابك الشهري متاح الآن للتحميل.', bodyEn:'Your monthly statement is now available to download.', tAr:'أمس', tEn:'Yesterday' },
+  { id:'low', domains:['all','banks'], iAr:'ب', iEn:'A', bK:'important', read:false, titleAr:'رصيدك أقل من SAR 500', titleEn:'Balance below SAR 500', subAr:'البنك الأهلي', subEn:'Al Ahli Bank', bodyAr:'انخفض رصيد حسابك عن الحد الذي حددته (SAR 500).', bodyEn:'Your balance dropped below your set threshold (SAR 500).', tAr:'منذ ساعتين', tEn:'2h ago' },
+
+  /* ---------------- اتصالاتك · Telecom (5) ---------------- */
+  { id:'telecom', domains:['all','telecom'], iAr:'S', iEn:'S', bK:'important', read:false, titleAr:'فاتورتك جاهزة · SAR 210', titleEn:'Your bill is ready · SAR 210', subAr:'STC', subEn:'STC', bodyAr:'فاتورة سبتمبر مستحقة خلال ٥ أيام.', bodyEn:'Your September bill is due in 5 days.', tAr:'منذ ٤ ساعات', tEn:'4h ago' },
+  { id:'data', domains:['all','telecom'], iAr:'S', iEn:'S', bK:'', read:true, titleAr:'تبقّى ٢ جيجابايت من باقتك', titleEn:'2 GB left in your bundle', subAr:'STC', subEn:'STC', bodyAr:'استهلكت معظم باقة الإنترنت لهذا الشهر.', bodyEn:'You have used most of this month\'s data.', tAr:'أمس', tEn:'Yesterday' },
+  { id:'renew', domains:['all','telecom'], iAr:'S', iEn:'S', bK:'', read:true, titleAr:'تم تجديد باقتك بنجاح', titleEn:'Your bundle renewed', subAr:'STC', subEn:'STC', bodyAr:'تم تجديد باقتك الشهرية تلقائيًا.', bodyEn:'Your monthly bundle renewed automatically.', tAr:'٢ سبتمبر', tEn:'2 Sep' },
+  { id:'upsell', domains:['all','telecom'], iAr:'S', iEn:'S', bK:'worth', read:true, titleAr:'عرض ترقية الباقة', titleEn:'Bundle upgrade offer', subAr:'STC', subEn:'STC', bodyAr:'ضاعف الإنترنت بنفس السعر لفترة محدودة.', bodyEn:'Double your data at the same price, limited time.', tAr:'٣ سبتمبر', tEn:'3 Sep' },
+  { id:'otp', domains:['all','telecom'], iAr:'S', iEn:'S', bK:'', read:true, titleAr:'رمز التحقق: 4821', titleEn:'Verification code: 4821', subAr:'STC', subEn:'STC', bodyAr:'استخدم الرمز 4821 لإتمام العملية. لا تشاركه مع أحد.', bodyEn:'Use code 4821 to continue. Do not share it.', tAr:'أمس', tEn:'Yesterday' },
+
+  /* ---------------- مشترياتك · Shopping (5) ---------------- */
+  { id:'offer', domains:['all','shop'], iAr:'أ', iEn:'a', bK:'worth', read:false, titleAr:'خصم ٢٥٪ لفترة محدودة', titleEn:'25% off for a limited time', subAr:'أمازون · ينتهي اليوم', subEn:'Amazon · Ends today', bodyAr:'خصم ٢٥٪ على قسم مختار، ينتهي منتصف الليل.', bodyEn:'25% off a selected category, ends midnight.', tAr:'منذ ساعتين', tEn:'2h ago' },
+  { id:'cart', domains:['all','shop'], iAr:'ن', iEn:'n', bK:'', read:true, titleAr:'سلة التسوق تنتظرك', titleEn:'Your cart is waiting', subAr:'نون', subEn:'noon', bodyAr:'لديك ٣ منتجات في السلة لم تكمل شراءها.', bodyEn:'You have 3 items left in your cart.', tAr:'أمس', tEn:'Yesterday' },
+  { id:'orderc', domains:['all','shop'], iAr:'ن', iEn:'n', bK:'', read:true, titleAr:'تم تأكيد طلبك #A1029', titleEn:'Order #A1029 confirmed', subAr:'نون', subEn:'noon', bodyAr:'تم استلام طلبك وجارٍ تجهيزه.', bodyEn:'Your order was received and is being prepared.', tAr:'أمس', tEn:'Yesterday' },
+  { id:'stock', domains:['all','shop'], iAr:'أ', iEn:'a', bK:'worth', read:true, titleAr:'منتجك المفضّل عاد للمخزون', titleEn:'A favorite is back in stock', subAr:'أمازون', subEn:'Amazon', bodyAr:'المنتج الذي تابعته أصبح متوفرًا الآن.', bodyEn:'The item you followed is available again.', tAr:'٤ سبتمبر', tEn:'4 Sep' },
+  { id:'review', domains:['all','shop'], iAr:'أ', iEn:'a', bK:'', read:true, titleAr:'قيّم مشترياتك الأخيرة', titleEn:'Rate your recent purchase', subAr:'أمازون', subEn:'Amazon', bodyAr:'شاركنا رأيك في آخر طلب استلمته.', bodyEn:'Tell us about your latest order.', tAr:'٣ سبتمبر', tEn:'3 Sep' },
+
+  /* ---------------- طلباتك · Delivery (5) ---------------- */
+  { id:'ship', domains:['all','delivery'], iAr:'أ', iEn:'A', bK:'', read:true, titleAr:'تم شحن طلبك', titleEn:'Your order has shipped', subAr:'أرامكس · يصل غدًا', subEn:'Aramex · Arrives tomorrow', bodyAr:'خرج طلبك من المستودع، يصل غدًا.', bodyEn:'Your parcel left the warehouse, arrives tomorrow.', tAr:'منذ ٥ ساعات', tEn:'5h ago' },
+  { id:'outfd', domains:['all','delivery'], iAr:'أ', iEn:'A', bK:'important', read:false, titleAr:'طلبك خرج للتوصيل', titleEn:'Your order is out for delivery', subAr:'أرامكس', subEn:'Aramex', bodyAr:'المندوب في الطريق إليك خلال ٤٥ دقيقة.', bodyEn:'The courier is on the way, within 45 min.', tAr:'منذ ٣٠ دقيقة', tEn:'30m ago' },
+  { id:'delivered', domains:['all','delivery'], iAr:'س', iEn:'S', bK:'', read:true, titleAr:'تم تسليم طلبك بنجاح', titleEn:'Your order was delivered', subAr:'سمسا', subEn:'SMSA', bodyAr:'تم تسليم طلبك عند الباب.', bodyEn:'Your parcel was delivered to your door.', tAr:'أمس', tEn:'Yesterday' },
+  { id:'missed', domains:['all','delivery'], iAr:'س', iEn:'S', bK:'urgent', read:false, titleAr:'تعذّر تسليم طلبك', titleEn:'Delivery attempt failed', subAr:'سمسا', subEn:'SMSA', bodyAr:'لم نتمكن من الوصول إليك. أعد جدولة التوصيل.', bodyEn:'We couldn\'t reach you. Please reschedule.', tAr:'منذ ساعة', tEn:'1h ago' },
+  { id:'addr', domains:['all','delivery'], iAr:'أ', iEn:'A', bK:'', read:true, titleAr:'حدّث عنوان التوصيل', titleEn:'Update your delivery address', subAr:'أرامكس', subEn:'Aramex', bodyAr:'تأكد من صحة عنوانك قبل الشحنة القادمة.', bodyEn:'Confirm your address before the next shipment.', tAr:'٢ سبتمبر', tEn:'2 Sep' },
+
+  /* ---------------- مواعيدك · Appointments (5) ---------------- */
+  { id:'health', domains:['all','health'], iAr:'ص', iEn:'H', bK:'urgent', read:false, titleAr:'تذكير موعد العيادة', titleEn:'Clinic appointment reminder', subAr:'مستشفى الملك فيصل · غدًا ٤ م', subEn:'KFSH · Tomorrow 4 PM', bodyAr:'موعدك غدًا الساعة ٤ مساءً في عيادة الباطنة.', bodyEn:'Your appointment is tomorrow at 4 PM, Internal Medicine.', tAr:'أمس', tEn:'Yesterday' },
+  { id:'lab', domains:['all','health'], iAr:'ص', iEn:'H', bK:'important', read:false, titleAr:'نتيجة التحاليل جاهزة', titleEn:'Lab results are ready', subAr:'صحتي', subEn:'Sehhaty', bodyAr:'نتائج تحاليلك الأخيرة متاحة الآن.', bodyEn:'Your recent lab results are available.', tAr:'منذ ٦ ساعات', tEn:'6h ago' },
+  { id:'apptc', domains:['all','health'], iAr:'ص', iEn:'H', bK:'', read:true, titleAr:'تم تأكيد حجز موعدك', titleEn:'Your booking is confirmed', subAr:'مستشفى الملك فيصل', subEn:'KFSH', bodyAr:'تم تأكيد حجز موعدك القادم.', bodyEn:'Your upcoming appointment is confirmed.', tAr:'أمس', tEn:'Yesterday' },
+  { id:'med', domains:['all','health'], iAr:'ص', iEn:'H', bK:'', read:true, titleAr:'تذكير بجرعة الدواء', titleEn:'Medication reminder', subAr:'صحتي', subEn:'Sehhaty', bodyAr:'حان وقت جرعتك المسائية.', bodyEn:'It\'s time for your evening dose.', tAr:'أمس', tEn:'Yesterday' },
+  { id:'rx', domains:['all','health'], iAr:'ص', iEn:'H', bK:'worth', read:true, titleAr:'حان وقت تجديد الوصفة', titleEn:'Time to renew your prescription', subAr:'صحتي', subEn:'Sehhaty', bodyAr:'وصفتك على وشك الانتهاء، جدّدها الآن.', bodyEn:'Your prescription is running out, renew it now.', tAr:'١ سبتمبر', tEn:'1 Sep' },
+
+  /* ---------------- رحلاتك · Travel (5) ---------------- */
+  { id:'travel', domains:['all','travel'], iAr:'ط', iEn:'f', bK:'worth', read:true, titleAr:'عرض رحلات جديد', titleEn:'New flight deal', subAr:'طيران ناس', subEn:'flynas', bodyAr:'رحلات داخلية تبدأ من SAR 149.', bodyEn:'Domestic flights from SAR 149.', tAr:'أمس', tEn:'Yesterday' },
+  { id:'flightr', domains:['all','travel'], iAr:'خ', iEn:'S', bK:'important', read:false, titleAr:'تذكير: رحلتك بعد ٣ أيام', titleEn:'Reminder: your flight in 3 days', subAr:'الخطوط السعودية', subEn:'Saudia', bodyAr:'لا تنسَ إتمام تسجيل الوصول قبل الرحلة.', bodyEn:'Don\'t forget to check in before your flight.', tAr:'منذ ٨ ساعات', tEn:'8h ago' },
+  { id:'flightc', domains:['all','travel'], iAr:'خ', iEn:'S', bK:'', read:true, titleAr:'تم تأكيد حجز الرحلة', titleEn:'Your flight is booked', subAr:'الخطوط السعودية', subEn:'Saudia', bodyAr:'تم تأكيد حجزك رقم SV-8842.', bodyEn:'Booking SV-8842 confirmed.', tAr:'أمس', tEn:'Yesterday' },
+  { id:'flightch', domains:['all','travel'], iAr:'ط', iEn:'f', bK:'urgent', read:false, titleAr:'تغيّر موعد الإقلاع', titleEn:'Your departure time changed', subAr:'طيران ناس', subEn:'flynas', bodyAr:'تأخر موعد الإقلاع ساعة واحدة. راجع تفاصيل رحلتك.', bodyEn:'Departure delayed by 1 hour. Check your details.', tAr:'منذ ٣ ساعات', tEn:'3h ago' },
+  { id:'boarding', domains:['all','travel'], iAr:'خ', iEn:'S', bK:'', read:true, titleAr:'بطاقة الصعود جاهزة', titleEn:'Boarding pass is ready', subAr:'الخطوط السعودية', subEn:'Saudia', bodyAr:'بطاقة الصعود الخاصة بك متاحة الآن.', bodyEn:'Your boarding pass is now available.', tAr:'أمس', tEn:'Yesterday' }
 ];
 
 /* ------------------------- Translations --------------------------- */
@@ -99,6 +132,9 @@ var T = {
     filter:'فلترة', searchPlaceholder:'ابحث عن إشعار، جهة، كلمة أو سؤال..', domain:'المجال:', brief:'خلاصة لمحة', today:'اليوم',
     briefBody:'جمعنا لك إشعاراتك من ٦ مصادر، وميّزنا المهم منها.', n1:'١', n2:'٢', n3:'٣', n5:'٥', n9:'٩',
     urgentPl:'عاجلة', banksPl:'بنوك', offerPl:'عرض', topNow:'الأهم الآن',
+    lamhaToday:'لمحة اليوم', todaySub:'جمعنا إشعاراتك من ٦ مصادر ورتّبناها لك.', statNew:'الجديدة', statImportant:'المهمة', statUnread:'غير المقروءة',
+    needsAttention:'يحتاج انتباهك', yourGroups:'مجموعاتك الذكية', groupsSub:'إشعاراتك مجمّعة حسب النوع', lastUpdate:'آخر تحديث', unreadWord:'غير مقروء', openGroupW:'فتح',
+    searchCta:'بحث ذكي…', filterBtn:'فلترة', relatedNotifs:'إشعارات مرتبطة', originalContent:'الرسالة الأصلية', categoryW:'التصنيف',
     search:'البحث', searchQuery:'رسائل البنك في أغسطس', smart:'بحث ذكي', saveSearch:'حفظ البحث', results18:'١٨ نتيجة',
     searchSummary:'وجدنا ١٨ إشعارًا من البنك الأهلي في أغسطس، مقسّمة كالتالي:', ops:'عمليات مالية', cardsW:'بطاقات', statementsW:'كشف حساب',
     resultsW:'النتائج', newestFirst:'الأحدث أولاً', iDep:'ت', depositRes:'تم إيداع مبلغ SAR 2,450', aug28:'٢٨ أغسطس', iCard:'ب', cardPurchase:'عملية شراء بالبطاقة', aug21:'٢١ أغسطس',
@@ -128,6 +164,9 @@ var T = {
     filter:'Filter', searchPlaceholder:'Search a notification, sender, word or question..', domain:'Domain:', brief:'Lamha brief', today:'Today',
     briefBody:'We gathered your notifications from 6 sources and flagged what matters.', n1:'1', n2:'2', n3:'3', n5:'5', n9:'9',
     urgentPl:'Urgent', banksPl:'Banks', offerPl:'Offer', topNow:'Top now',
+    lamhaToday:'Your Lamha today', todaySub:'We gathered your alerts from 6 sources and organized them.', statNew:'New', statImportant:'Important', statUnread:'Unread',
+    needsAttention:'Needs your attention', yourGroups:'Your smart groups', groupsSub:'Your alerts grouped by type', lastUpdate:'Last update', unreadWord:'unread', openGroupW:'Open',
+    searchCta:'Smart search…', filterBtn:'Filter', relatedNotifs:'Related notifications', originalContent:'Original message', categoryW:'Category',
     search:'Search', searchQuery:'Bank messages in August', smart:'Smart search', saveSearch:'Save search', results18:'18 results',
     searchSummary:'We found 18 notifications from Al Ahli Bank in August, broken down as:', ops:'Transactions', cardsW:'Cards', statementsW:'Statements',
     resultsW:'Results', newestFirst:'Newest first', iDep:'D', depositRes:'Deposit of SAR 2,450', aug28:'28 Aug', iCard:'P', cardPurchase:'Card purchase', aug21:'21 Aug',
@@ -197,36 +236,39 @@ function computeVals() {
   var dcol = { all:pal.pr, banks:pal.pr, telecom:pal.mint, shop:pal.ac, delivery:pal.pr2, health:pal.ink, travel:pal.mint };
   var visible = NOTIFS.filter(function (n) { return n.domains.indexOf(dom) !== -1; });
   var activeDomain = DOMAINS.find(function (d) { return d.key === dom; }) || DOMAINS[0];
-  var unreadIds = ['bank', 'deposit', 'offer'];
+  var isUnread = function (n) { return n.read === false; };
   var prioF = function (a) { return st.priorityOnly ? a.filter(function (n) { return n.bK; }) : a; };
   var shown = prioF(visible);
   var listBase = prioF(visible.filter(function (n) {
-    return st.listFilter === 'all' || unreadIds.indexOf(n.id) !== -1;
+    return st.listFilter === 'all' || isUnread(n);
   }));
   var badge = function (k) {
     return k === 'urgent' ? (lang === 'ar' ? 'عاجل' : 'Urgent')
+      : k === 'important' ? (lang === 'ar' ? 'مهم' : 'Important')
       : k === 'worth' ? (lang === 'ar' ? 'يستحق انتباهك' : 'Worth a look') : '';
   };
   var mapN = function (n) {
     var key = n.domains[1] || 'all';
     var c = dcol[key] || pal.pr;
-    var urgent = n.bK === 'urgent', worth = n.bK === 'worth';
+    var urgent = n.bK === 'urgent', important = n.bK === 'important', worth = n.bK === 'worth';
+    var unread = isUnread(n);
     return {
       id: n.id,
       initial: n[lang === 'ar' ? 'iAr' : 'iEn'],
-      avBg: urgent ? pal.ink : worth ? pal.ac : softMix(c, 16),
-      avColor: urgent ? '#FFF' : worth ? '#231708' : c,
+      avBg: urgent ? pal.ink : important ? pal.pr : worth ? pal.ac : softMix(c, 16),
+      avColor: urgent ? '#FFF' : important ? '#FFF' : worth ? '#231708' : c,
       title: n[lang === 'ar' ? 'titleAr' : 'titleEn'],
       sub: n[lang === 'ar' ? 'subAr' : 'subEn'],
+      body: n[lang === 'ar' ? 'bodyAr' : 'bodyEn'] || '',
       time: n[lang === 'ar' ? 'tAr' : 'tEn'],
       badge: badge(n.bK),
-      badgeBg: urgent ? pal.ink : worth ? pal.ac : 'transparent',
-      badgeColor: urgent ? '#FFF' : '#231708',
-      bg: urgent ? tintSurf(pal.ink, 15) : worth ? tintSurf(pal.ac, 20) : tintSurf(c, 13),
-      border: urgent ? tintSurf(pal.ink, 36) : worth ? tintSurf(pal.ac, 44) : tintSurf(c, 30),
+      badgeBg: urgent ? pal.ink : important ? pal.pr : worth ? pal.ac : 'transparent',
+      badgeColor: (urgent || important) ? '#FFF' : '#231708',
+      bg: urgent ? tintSurf(pal.ink, 15) : important ? tintSurf(pal.pr, 14) : worth ? tintSurf(pal.ac, 20) : tintSurf(c, 13),
+      border: urgent ? tintSurf(pal.ink, 36) : important ? tintSurf(pal.pr, 34) : worth ? tintSurf(pal.ac, 44) : tintSurf(c, 30),
       time2: (n[lang === 'ar' ? 'tAr' : 'tEn']) || t.today,
-      unread: unreadIds.indexOf(n.id) !== -1,
-      rail: unreadIds.indexOf(n.id) !== -1 ? pal.pr : c
+      unread: unread,
+      rail: unread ? pal.pr : c
     };
   };
 
@@ -249,6 +291,29 @@ function computeVals() {
   }
 
   var connectedCount = Object.keys(st.connected).filter(function (k) { return st.connected[k]; }).length;
+
+  // ---- Aggregator model: summary, needs-attention, smart groups ----
+  var allNotifs = NOTIFS;
+  var totalCount = allNotifs.length;
+  var importantCount = allNotifs.filter(function (n) { return n.bK === 'urgent' || n.bK === 'important'; }).length;
+  var unreadCount = allNotifs.filter(isUnread).length;
+  var needsAttention = allNotifs.filter(function (n) {
+    return (n.bK === 'urgent' || n.bK === 'important') && isUnread(n);
+  });
+  var smartGroups = DOMAINS.filter(function (d) { return d.key !== 'all'; }).map(function (d) {
+    var c = dcol[d.key] || pal.pr;
+    var inGroup = allNotifs.filter(function (n) { return n.domains.indexOf(d.key) !== -1; });
+    var unreadInGroup = inGroup.filter(isUnread).length;
+    return {
+      key: d.key,
+      name: lang === 'ar' ? d.groupAr : d.groupEn,
+      count: toArabicNum(inGroup.length),
+      unread: unreadInGroup,
+      unreadLabel: toArabicNum(unreadInGroup),
+      last: lang === 'ar' ? d.lastAr : d.lastEn,
+      icon: ICON[d.icon], color: c, iconBg: tintSurf(c, 16), ring: tintSurf(c, 30)
+    };
+  });
 
   return {
     t: t,
@@ -296,6 +361,12 @@ function computeVals() {
     activeCount: toArabicNum(activeDomain.count),
     visibleCountLabel: lang === 'ar' ? (toArabicNum(shown.length) + ' إشعار') : (shown.length + ' notifications'),
     visibleNotifs: shown.map(mapN),
+    // aggregator home
+    sumTotal: toArabicNum(totalCount), sumImportant: toArabicNum(importantCount), sumUnread: toArabicNum(unreadCount),
+    needsList: needsAttention.map(mapN), needsCount: toArabicNum(needsAttention.length), hasNeeds: needsAttention.length > 0,
+    smartGroups: smartGroups,
+    // related notifications (details): same domain as the deposit sample (banks), excluding itself
+    related: NOTIFS.filter(function (n) { return n.domains.indexOf('banks') !== -1 && n.id !== 'deposit'; }).slice(0, 3).map(mapN),
     navHomeColor: s === 'home' ? pal.pr : '#9AA69F',
     navListColor: s === 'list' ? pal.pr : '#9AA69F',
     navSearchColor: s === 'search' ? pal.pr : '#9AA69F',
@@ -467,32 +538,63 @@ function notifCard(n) {
     + '<span style="font-size:11px;color:var(--sub,#8A968F);flex-shrink:0;">' + n.time + '</span></button>';
 }
 
+function statTile(num, label, accent) {
+  return '<div style="flex:1; background:rgba(255,255,255,.14); border-radius:12px; padding:10px 8px; display:flex; flex-direction:column; gap:2px; align-items:center;">'
+    + '<span style="font-family:\'Readex Pro\'; font-weight:700; font-size:20px; color:' + (accent ? 'var(--ac,#FFB020)' : '#FFF') + ';">' + num + '</span>'
+    + '<span style="font-size:10px; color:#FFFFFF; opacity:.82; text-align:center;">' + label + '</span></div>';
+}
+
+function groupCard(g, lang) {
+  var word = lang === 'ar' ? 'إشعار' : 'alerts';
+  var unreadBadge = g.unread > 0
+    ? '<span style="background:' + g.color + ';color:#FFF;font-size:10px;font-weight:700;min-width:20px;height:20px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 6px;">' + g.unreadLabel + '</span>'
+    : '<span style="width:8px;height:8px;border-radius:50%;background:' + g.ring + ';"></span>';
+  return '<button data-act="openGroup" data-key="' + g.key + '" style="text-align:start; border:1px solid ' + g.ring + '; background:var(--surf,#FFF); border-radius:16px; padding:12px; display:flex; flex-direction:column; gap:9px; cursor:pointer; animation:lm-slide .2s ease;">'
+    + '<div style="display:flex; align-items:center; justify-content:space-between;">'
+    + '<span style="width:38px;height:38px;border-radius:12px;background:' + g.iconBg + ';color:' + g.color + ';display:flex;align-items:center;justify-content:center;">' + g.icon + '</span>'
+    + unreadBadge + '</div>'
+    + '<span style="font-family:\'Readex Pro\'; font-weight:600; font-size:14px; color:var(--txt,#10221B);">' + g.name + '</span>'
+    + '<div style="display:flex; align-items:center; justify-content:space-between; gap:6px;"><span style="font-size:11px; color:var(--sub,#8A968F);">' + g.count + ' ' + word + '</span><span style="font-size:10px; color:var(--sub,#8A968F);">' + g.last + '</span></div>'
+    + '</button>';
+}
+
 function screenHome(v) {
   var t = v.t;
-  var cards = v.visibleNotifs.map(notifCard).join('');
+  var needs = v.hasNeeds
+    ? '<div style="display:flex; align-items:center; justify-content:space-between; margin-top:2px;">'
+      + '<div style="display:flex; align-items:center; gap:7px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink,#FF4757)" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>'
+      + '<span style="font-family:\'Readex Pro\'; font-weight:600; font-size:15px; color:var(--head,#073A2A);">' + t.needsAttention + '</span></div>'
+      + '<span style="background:' + tintSurf(v.cInk, 16) + '; color:var(--ink,#FF4757); font-size:11px; font-weight:700; padding:3px 10px; border-radius:999px;">' + v.needsCount + '</span></div>'
+      + v.needsList.map(notifCard).join('')
+    : '';
+  var groups = v.smartGroups.map(function (g) { return groupCard(g, v.lang); }).join('');
   return '<div style="position:absolute; inset:0; display:flex; flex-direction:column; animation:lm-fade .3s ease;">'
     + '<div style="padding:2px 18px 12px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">'
     + '<div style="display:flex; align-items:center; gap:8px;">' + logo(25) + '<span style="font-family:\'Readex Pro\'; font-weight:700; font-size:18px; color:var(--head,#073A2A);">' + t.appName + '</span></div>'
     + '<div style="display:flex; align-items:center; gap:8px;">'
     + '<button data-act="toggleLang" style="background:var(--surf,#FFF);border:1px solid var(--line,#E4DCCB);border-radius:999px;padding:6px 10px;font-family:\'Readex Pro\';font-weight:600;font-size:11px;color:var(--pr,#0F7A5A);cursor:pointer;">' + t.langSwitch + '</button>'
-    + '<button data-act="openDomains" title="' + esc(t.filter) + '" style="width:36px;height:36px;border-radius:12px;background:var(--surf,#FFF);border:1px solid var(--line,#E4DCCB);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.9"><path d="M3 4h18l-7 8v6l-4 2v-8z"></path></svg><span style="position:absolute;top:-4px;inset-inline-start:-4px;background:var(--ac,#FFB020);color:var(--txt,#10221B);font-size:9px;font-weight:700;min-width:15px;height:15px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 3px;">' + v.activeCount + '</span></button>'
     + '<button data-act="openMenu" style="width:31px;height:31px;border-radius:50%;background:var(--ac,#FFB020);border:none;cursor:pointer;"></button>'
     + '</div></div>'
-    + '<div style="padding:0 18px 12px; flex-shrink:0;"><button data-act="goSearch" style="width:100%;background:var(--surf,#FFF); border:1px solid var(--line,#E4DCCB); border-radius:14px; height:46px; display:flex; align-items:center; padding:0 16px; gap:10px; cursor:pointer;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9AA69F" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg><span style="font-size:14px; color:var(--sub,#8A968F);">' + t.searchPlaceholder + '</span></button></div>'
-    + '<div style="padding:0 18px 12px; flex-shrink:0; display:flex; align-items:center; justify-content:space-between;">'
-    + '<div style="display:flex; align-items:center; gap:7px;"><span style="font-size:13px; color:var(--sub,#8A968F);">' + t.domain + '</span><button data-act="openDomains" style="background:var(--dk,#073A2A); color:#FFF; font-size:12px; font-weight:600; padding:7px 13px; border-radius:11px; border:none; cursor:pointer; display:flex; align-items:center; gap:6px;">' + v.activeDomainLabel + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.4" opacity=".7"><path d="m6 9 6 6 6-6"></path></svg></button></div>'
-    + '<span style="background:#FFF9EC; color:#B77A00; font-size:11px; font-weight:600; padding:5px 11px; border-radius:999px;">' + v.visibleCountLabel + '</span></div>'
-    + '<div class="lm-scroll" style="flex:1; overflow-y:auto; padding:0 18px 16px; display:flex; flex-direction:column; gap:11px;">'
+    // Smart search + separate filter button
+    + '<div style="padding:0 18px 12px; flex-shrink:0; display:flex; align-items:center; gap:9px;">'
+    + '<button data-act="goSearch" style="flex:1;background:var(--surf,#FFF); border:1px solid var(--line,#E4DCCB); border-radius:14px; height:46px; display:flex; align-items:center; padding:0 14px; gap:9px; cursor:pointer; min-width:0;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg><span style="font-size:13px; color:var(--sub,#8A968F); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + t.searchPlaceholder + '</span></button>'
+    + '<button data-act="openDomains" title="' + esc(t.filterBtn) + '" style="height:46px; padding:0 13px; background:var(--dk,#073A2A); color:#FFF; border:none; border-radius:14px; cursor:pointer; display:flex; align-items:center; gap:6px; font-family:\'Readex Pro\'; font-weight:600; font-size:12px; flex-shrink:0; position:relative;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFF" stroke-width="2"><path d="M3 4h18l-7 8v6l-4 2v-8z"></path></svg>' + t.filterBtn + '<span style="position:absolute;top:-5px;inset-inline-start:-5px;background:var(--ac,#FFB020);color:var(--txt,#10221B);font-size:9px;font-weight:700;min-width:16px;height:16px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 3px;">' + v.activeCount + '</span></button>'
+    + '</div>'
+    + '<div class="lm-scroll" style="flex:1; overflow-y:auto; padding:0 18px 16px; display:flex; flex-direction:column; gap:12px;">'
+    // لمحة اليوم — summary
     + '<div style="background:linear-gradient(135deg,var(--pr,#0F7A5A),var(--pr2,#0B5E45)); border-radius:18px; padding:16px; display:flex; flex-direction:column; gap:12px;">'
-    + '<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:15px;">✦</span><span style="font-family:\'Readex Pro\'; font-weight:600; font-size:14px; color:#FFF;">' + t.brief + '</span><span style="margin-inline-start:auto; background:rgba(255,255,255,.16); color:#FFF; font-size:10px; padding:3px 9px; border-radius:999px;">' + t.today + '</span></div>'
-    + '<div style="font-size:13px; color:#FFFFFF; opacity:.92; line-height:1.7;">' + t.briefBody + '</div>'
+    + '<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:15px;">✦</span><span style="font-family:\'Readex Pro\'; font-weight:600; font-size:15px; color:#FFF;">' + t.lamhaToday + '</span><span style="margin-inline-start:auto; background:rgba(255,255,255,.16); color:#FFF; font-size:10px; padding:3px 9px; border-radius:999px;">' + t.today + '</span></div>'
+    + '<div style="font-size:13px; color:#FFFFFF; opacity:.92; line-height:1.7;">' + t.todaySub + '</div>'
     + '<div style="display:flex; gap:8px;">'
-    + '<div style="flex:1; background:rgba(255,255,255,.14); border-radius:12px; padding:9px; display:flex; flex-direction:column; gap:2px;"><span style="font-family:\'Readex Pro\'; font-weight:700; font-size:18px; color:#FFF;">' + t.n2 + '</span><span style="font-size:11px; color:#FFFFFF; opacity:.8;">' + t.urgentPl + '</span></div>'
-    + '<div style="flex:1; background:rgba(255,255,255,.14); border-radius:12px; padding:9px; display:flex; flex-direction:column; gap:2px;"><span style="font-family:\'Readex Pro\'; font-weight:700; font-size:18px; color:#FFF;">' + t.n3 + '</span><span style="font-size:11px; color:#FFFFFF; opacity:.8;">' + t.banksPl + '</span></div>'
-    + '<div style="flex:1; background:rgba(255,255,255,.14); border-radius:12px; padding:9px; display:flex; flex-direction:column; gap:2px;"><span style="font-family:\'Readex Pro\'; font-weight:700; font-size:18px; color:var(--ac,#FFB020);">' + t.n1 + '</span><span style="font-size:11px; color:#FFFFFF; opacity:.8;">' + t.offerPl + '</span></div>'
+    + statTile(v.sumTotal, t.statNew, false)
+    + statTile(v.sumImportant, t.statImportant, false)
+    + statTile(v.sumUnread, t.statUnread, true)
     + '</div></div>'
-    + '<div style="font-family:\'Readex Pro\'; font-weight:600; font-size:15px; color:var(--head,#073A2A);">' + t.topNow + '</div>'
-    + cards
+    // يحتاج انتباهك
+    + needs
+    // مجموعاتك الذكية
+    + '<div style="display:flex; align-items:baseline; justify-content:space-between; margin-top:4px;"><span style="font-family:\'Readex Pro\'; font-weight:600; font-size:15px; color:var(--head,#073A2A);">' + t.yourGroups + '</span><span style="font-size:11px; color:var(--sub,#8A968F);">' + t.groupsSub + '</span></div>'
+    + '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">' + groups + '</div>'
     + '</div></div>';
 }
 
@@ -537,6 +639,10 @@ function screenDetails(v) {
     + '<div style="display:flex; justify-content:space-between;"><span style="font-size:13px;color:var(--sub,#8A968F);">' + t.date + '</span><span style="font-size:13px;font-weight:600;">' + t.dateVal + '</span></div><div style="height:1px; background:var(--line,#EDE6D9);"></div>'
     + '<div style="display:flex; justify-content:space-between;"><span style="font-size:13px;color:var(--sub,#8A968F);">' + t.ref + '</span><span style="font-size:13px;font-weight:600; direction:ltr;">#NB123456789</span></div>'
     + '</div>'
+    // Original message content
+    + '<div style="background:' + tintSurf(v.cPr, 10) + '; border:1px solid ' + tintSurf(v.cPr, 26) + '; border-radius:16px; padding:14px; display:flex; flex-direction:column; gap:7px;">'
+    + '<div style="display:flex; align-items:center; gap:7px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.9"><path d="M4 4h16v12H5.2L4 18z"></path></svg><span style="font-size:12px; font-weight:600; color:var(--pr,#0F7A5A);">' + t.originalContent + '</span></div>'
+    + '<span style="font-size:13px; color:var(--txt,#10221B); line-height:1.8;">' + (v.lang === 'ar' ? 'عميلنا العزيز، أُودع مبلغ SAR 2,450 في حسابك الجاري لدى البنك الأهلي بتاريخ ٩ سبتمبر. الرقم المرجعي #NB123456789.' : 'Dear customer, SAR 2,450 has been deposited into your Al Ahli Bank current account on 9 Sep. Reference #NB123456789.') + '</span></div>'
     + '<button data-act="goThread" style="background:var(--pr,#0F7A5A); color:#FFF; border:none; height:50px; border-radius:15px; font-family:\'Readex Pro\'; font-weight:600; font-size:15px; cursor:pointer;">' + t.viewRelated + '</button>'
     + '<span style="font-family:\'Readex Pro\'; font-weight:600; font-size:14px; color:var(--head,#073A2A);">' + t.quickActions + '</span>'
     + '<div style="display:flex; gap:10px;">'
@@ -544,6 +650,9 @@ function screenDetails(v) {
     + '<button data-act="actPay" style="flex:1; background:var(--surf,#FFF); border:none; cursor:pointer; border-radius:14px; padding:14px 8px; display:flex; flex-direction:column; align-items:center; gap:7px; font-family:\'IBM Plex Sans Arabic\';"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 10h18"></path></svg><span style="font-size:11px; color:var(--txt,#10221B);">' + t.payBill + '</span></button>'
     + '<button data-act="actTransfer" style="flex:1; background:var(--surf,#FFF); border:none; cursor:pointer; border-radius:14px; padding:14px 8px; display:flex; flex-direction:column; align-items:center; gap:7px; font-family:\'IBM Plex Sans Arabic\';"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.8"><path d="M4 12v8h16v-8M12 3v13M8 7l4-4 4 4"></path></svg><span style="font-size:11px; color:var(--txt,#10221B);">' + t.transfer + '</span></button>'
     + '</div>'
+    // Related notifications from the same sender
+    + '<span style="font-family:\'Readex Pro\'; font-weight:600; font-size:14px; color:var(--head,#073A2A); margin-top:2px;">' + t.relatedNotifs + '</span>'
+    + v.related.map(notifCard).join('')
     + '</div></div>';
 }
 
@@ -799,6 +908,7 @@ var ACTIONS = {
   openApp: function () { go('home'); },
   openDetails: function () { setState({ screen: 'details', domainsOpen: false, menuOpen: false }); },
   openNotif: function () { setState({ screen: 'details', domainsOpen: false, menuOpen: false }); },
+  openGroup: function (el) { setState({ domain: el.getAttribute('data-key'), screen: 'list', listFilter: 'all', domainsOpen: false, menuOpen: false }); },
   goHome: function () { go('home'); },
   goSearch: function () { go('search'); },
   goSettings: function () { go('settings'); },
