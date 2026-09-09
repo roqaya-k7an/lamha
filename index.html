@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>لمحة — Lamha</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing:border-box; }
+  html, body { margin:0; }
+  body { background:#E7E1D5; -webkit-tap-highlight-color:transparent; }
+  button { font-family:inherit; }
+  @keyframes lm-sheet { from { transform:translateY(100%); } to { transform:translateY(0); } }
+  @keyframes lm-fade { from { opacity:0; } to { opacity:1; } }
+  @keyframes lm-slide { from { opacity:0; transform:translateX(-14px); } to { opacity:1; transform:translateX(0); } }
+  .lm-scroll::-webkit-scrollbar { width:0; height:0; }
+  .lm-scroll { scrollbar-width:none; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+"use strict";
+
+/* ------------------------------------------------------------------ *
+ * Lamha — faithful, fully-interactive reproduction of the prototype.
+ * All buttons are active and clickable.
+ * ------------------------------------------------------------------ */
+
+var App = {
+  state: {
+    screen: 'onboarding', domain: 'all', domainsOpen: false, tab: 'thread',
+    menuOpen: false, listFilter: 'all', lang: 'ar', palette: 'green',
+    darkMode: false, push: true, sound: true, priorityOnly: false,
+    authMode: 'login',
+    connected: { banks: true, telecom: true, shop: true, delivery: false, health: true, travel: false },
+    toast: ''
+  },
+  _tt: null
+};
+
+/* ---------------------------- Icons ------------------------------- */
+var ICON = {
+  grid:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>',
+  bank:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 21h18M4 10h16M5 10 12 4l7 6M6 10v11M18 10v11M10 10v11M14 10v11"></path></svg>',
+  telecom:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 20h.01M6 20v-4M10 20v-8M14 20v-12M18 20V4"></path></svg>',
+  shop:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2 3 7v13a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V7l-3-5z"></path><path d="M3 7h18M16 11a4 4 0 0 1-8 0"></path></svg>',
+  delivery:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="1" y="6" width="13" height="11" rx="1"></rect><path d="M14 9h4l3 3v5h-7z"></path><circle cx="6" cy="18" r="2"></circle><circle cx="17" cy="18" r="2"></circle></svg>',
+  health:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.8 5.6a5 5 0 0 0-7-.2L12 7l-1.8-1.6a5 5 0 0 0-7 7L12 21l8.8-8.6a5 5 0 0 0 0-6.8z"></path></svg>',
+  travel:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 16l9-3 4-9 2 1-2 8 6-2 1 2-8 4-3 6-2-1 1-6-5 1z"></path></svg>'
+};
+
+/* --------------------------- Palettes ----------------------------- */
+var PALETTES = [
+  { id:'green', ar:'أخضر', en:'Green', sw:['#0F7A5A','#2FD08A','#FFB020','#F4EEE2','#FF4757'], pr:'#0F7A5A', pr2:'#0B5E45', dk:'#073A2A', ac:'#FFB020', mint:'#2FD08A', ink:'#FF4757' },
+  { id:'forest', ar:'غابة', en:'Forest', sw:['#386641','#6A994E','#A7C957','#F2E8CF','#BC4749'], pr:'#386641', pr2:'#2A4E32', dk:'#1E3A28', ac:'#A7C957', mint:'#6A994E', ink:'#BC4749' },
+  { id:'teal', ar:'تركوازي', en:'Teal', sw:['#0E7C7B','#17BEBB','#D4F4DD','#D62246','#4B1D3F'], pr:'#0E7C7B', pr2:'#0A5352', dk:'#123C3B', ac:'#17BEBB', mint:'#17BEBB', ink:'#D62246' },
+  { id:'turf', ar:'حقلي', en:'Turf', sw:['#306B34','#1C5253','#F3FFC6','#C3EB78','#B6174B'], pr:'#306B34', pr2:'#24512A', dk:'#153A2B', ac:'#C3EB78', mint:'#1C5253', ink:'#B6174B' },
+  { id:'navy', ar:'كحلي', en:'Navy', sw:['#0466C8','#0353A4','#023E7D','#002855','#5C677D'], pr:'#0466C8', pr2:'#0353A4', dk:'#001845', ac:'#F2A03D', mint:'#3B82C4', ink:'#E63946' },
+  { id:'slate', ar:'رمادي مزرق', en:'Slate', sw:['#CAD2C5','#84A98C','#52796F','#354F52','#2F3E46'], pr:'#52796F', pr2:'#3E5A52', dk:'#2F3E46', ac:'#84A98C', mint:'#84A98C', ink:'#C1666B' },
+  { id:'olive', ar:'زيتوني', en:'Olive', sw:['#3A606E','#607B7D','#828E82','#AAAE8E','#E0E0E0'], pr:'#3A606E', pr2:'#2C4A55', dk:'#243943', ac:'#AAAE8E', mint:'#607B7D', ink:'#C1666B' },
+  { id:'grape', ar:'عنبي', en:'Grape', sw:['#DCCCA3','#824C71','#4A2545','#90AA86','#231017'], pr:'#824C71', pr2:'#5E3552', dk:'#4A2545', ac:'#DCCCA3', mint:'#90AA86', ink:'#B14A4A' },
+  { id:'purple', ar:'بنفسجي', en:'Purple', sw:['#531CB3','#944BBB','#AA7BC3','#CC92C2','#DBA8AC'], pr:'#6A2FC0', pr2:'#531CB3', dk:'#33116E', ac:'#DBA8AC', mint:'#AA7BC3', ink:'#D6455D' },
+  { id:'wine', ar:'نبيذي', en:'Wine', sw:['#440D0F','#603A40','#84596B','#AF9BB6','#191716'], pr:'#84596B', pr2:'#603A40', dk:'#2A1416', ac:'#AF9BB6', mint:'#84596B', ink:'#B03A3C' },
+  { id:'rose', ar:'وردي هادئ', en:'Rose', sw:['#CEBEBE','#ECE2D0','#D5B9B2','#A26769','#6D2E46'], pr:'#8F5557', pr2:'#6D2E46', dk:'#4A2230', ac:'#D5B9B2', mint:'#A26769', ink:'#B03A3C' }
+];
+
+/* --------------------------- Domains ------------------------------ */
+var DOMAINS = [
+  { key:'all', icon:'grid', count:7, ar:'الكل', en:'All' },
+  { key:'banks', icon:'bank', count:3, ar:'بنوك', en:'Banks' },
+  { key:'telecom', icon:'telecom', count:1, ar:'اتصالات', en:'Telecom' },
+  { key:'shop', icon:'shop', count:1, ar:'تسوّق', en:'Shopping' },
+  { key:'delivery', icon:'delivery', count:1, ar:'توصيل', en:'Delivery' },
+  { key:'health', icon:'health', count:1, ar:'صحة', en:'Health' },
+  { key:'travel', icon:'travel', count:1, ar:'سفر', en:'Travel' }
+];
+
+/* ------------------------- Notifications -------------------------- */
+var NOTIFS = [
+  { id:'bank', domains:['all','banks'], iAr:'ب', iEn:'A', bK:'urgent', titleAr:'تحديث بيانات الحساب', titleEn:'Update your account details', subAr:'البنك الأهلي', subEn:'Al Ahli Bank', tAr:'منذ ساعة', tEn:'1h ago' },
+  { id:'deposit', domains:['all','banks'], iAr:'ت', iEn:'D', bK:'', titleAr:'تم إيداع مبلغ SAR 2,450', titleEn:'Deposit of SAR 2,450', subAr:'البنك الأهلي', subEn:'Al Ahli Bank', tAr:'٩ سبتمبر', tEn:'9 Sep' },
+  { id:'card', domains:['all','banks'], iAr:'ح', iEn:'m', bK:'', titleAr:'عملية شراء بالبطاقة', titleEn:'Card purchase', subAr:'مدى · SAR 320', subEn:'mada · SAR 320', tAr:'منذ ٣ ساعات', tEn:'3h ago' },
+  { id:'health', domains:['all','health'], iAr:'ص', iEn:'H', bK:'urgent', titleAr:'تذكير موعد العيادة', titleEn:'Clinic appointment reminder', subAr:'مستشفى الملك فيصل · غدًا ٤ م', subEn:'KFSH · Tomorrow 4 PM', tAr:'أمس', tEn:'Yesterday' },
+  { id:'offer', domains:['all','shop'], iAr:'أ', iEn:'a', bK:'worth', titleAr:'خصم ٢٥٪ لفترة محدودة', titleEn:'25% off for a limited time', subAr:'أمازون · ينتهي اليوم', subEn:'Amazon · Ends today', tAr:'', tEn:'' },
+  { id:'telecom', domains:['all','telecom'], iAr:'S', iEn:'S', bK:'', titleAr:'فاتورتك جاهزة · SAR 210', titleEn:'Your bill is ready · SAR 210', subAr:'STC', subEn:'STC', tAr:'منذ ٤ ساعات', tEn:'4h ago' },
+  { id:'ship', domains:['all','delivery'], iAr:'أ', iEn:'A', bK:'', titleAr:'تم شحن طلبك', titleEn:'Your order has shipped', subAr:'أرامكس · يصل غدًا', subEn:'Aramex · Arrives tomorrow', tAr:'منذ ٥ ساعات', tEn:'5h ago' },
+  { id:'travel', domains:['all','travel'], iAr:'ط', iEn:'f', bK:'', titleAr:'عرض رحلات جديد', titleEn:'New flight deal', subAr:'طيران ناس', subEn:'flynas', tAr:'أمس', tEn:'Yesterday' }
+];
+
+/* ------------------------- Translations --------------------------- */
+var T = {
+  ar: {
+    previewTitle:'لمحة — نموذج تفاعلي', paletteTitle:'جرّب الباليتات', paletteHint:'اضغط أي باليت لتطبيقه فورًا على التطبيق واللوقو.',
+    langSwitch:'EN', appName:'لمحة', tagline:'كل اللي يهمك في مكان واحد بلمحة', start:'ابدأ الآن', login:'تسجيل الدخول',
+    filter:'فلترة', searchPlaceholder:'ابحث عن إشعار، جهة، كلمة أو سؤال..', domain:'المجال:', brief:'خلاصة لمحة', today:'اليوم',
+    briefBody:'جمعنا لك إشعاراتك من ٦ مصادر، وميّزنا المهم منها.', n1:'١', n2:'٢', n3:'٣', n5:'٥', n9:'٩',
+    urgentPl:'عاجلة', banksPl:'بنوك', offerPl:'عرض', topNow:'الأهم الآن',
+    search:'البحث', searchQuery:'رسائل البنك في أغسطس', smart:'بحث ذكي', saveSearch:'حفظ البحث', results18:'١٨ نتيجة',
+    searchSummary:'وجدنا ١٨ إشعارًا من البنك الأهلي في أغسطس، مقسّمة كالتالي:', ops:'عمليات مالية', cardsW:'بطاقات', statementsW:'كشف حساب',
+    resultsW:'النتائج', newestFirst:'الأحدث أولاً', iDep:'ت', depositRes:'تم إيداع مبلغ SAR 2,450', aug28:'٢٨ أغسطس', iCard:'ب', cardPurchase:'عملية شراء بالبطاقة', aug21:'٢١ أغسطس',
+    iBank:'ب', bankName:'البنك الأهلي', twoHours:'منذ ساعتين', amountDeposited:'تم إيداع مبلغ', from:'من', currentAcc:'حساب جاري', to:'إلى', date:'التاريخ', dateVal:'٩ سبتمبر ٢٠٢٦ · ١٠:٢٤ ص', ref:'الرقم المرجعي',
+    viewRelated:'عرض الإشعارات المرتبطة', quickActions:'إجراءات سريعة', saveInvoice:'حفظ الفاتورة', payBill:'دفع الفاتورة', transfer:'تحويل',
+    count128:'١٢٨ إشعار', tabEvent:'هذا الحدث', tabHistory:'تاريخ المرسِل', confirmOp:'تأكيد العملية', success:'تمّت بنجاح', receipt:'إيصال العملية', min45:'منذ ٤٥ دقيقة',
+    sep2026:'سبتمبر ٢٠٢٦', depositHist:'إيداع مبلغ SAR 2,450', sep9:'٩ سبتمبر', iCardMove:'ح', cardMove:'حركة بطاقة', sep5amazon:'٥ سبتمبر · أمازون', iStmt:'ك', statement:'كشف حساب', sep1:'١ سبتمبر', aug2026:'أغسطس ٢٠٢٦', iTransfer:'ت', transferAcc:'تحويل بين الحسابات',
+    settings:'الإعدادات والتفضيلات', userName:'رغد خان', personal:'البيانات الشخصية', notifPrefs:'تفضيلات الإشعارات', manageDomains:'إدارة المجالات والفئات', privacy:'الخصوصية والأمان', appearance:'المظهر', light:'فاتح', language:'اللغة', langVal:'العربية',
+    notifications:'الإشعارات', jumpDate:'انتقال لتاريخ', all:'الكل', unread:'غير مقروءة', greeting:'صباح الخير، رغد', greetingSub:'إشعاران مهمّان يحتاجان انتباهك اليوم',
+    allGood:'كل شيء تمام', allGoodSub:'لا إشعارات غير مقروءة في هذا المجال. راجعت كل شيء بلمحة.', showAll:'عرض الكل',
+    jumpTitle:'الانتقال إلى تاريخ', month:'سبتمبر ٢٠٢٦', quickJumps:'قفزات سريعة', todayJ:'اليوم', thisWeek:'هذا الأسبوع', thisMonth:'هذا الشهر', augustJ:'أغسطس', viewResults:'عرض النتائج',
+    home:'الرئيسية', allNotifs:'كل الإشعارات', settingsShort:'الإعدادات', logout:'تسجيل الخروج', more:'المزيد',
+    chooseDomain:'اختر المجال', domainsCount:'٧ مجالات', applyDomain:'تطبيق المجال', pushLabel:'التنبيهات الفورية', soundLabel:'صوت التنبيه', priorityLabel:'المهم فقط', darkV:'داكن',
+    authWelcome:'أهلاً بك في لمحة', authSub:'سجّل الدخول أو أنشئ حساباً لتبدأ', tabLogin:'دخول', tabSignup:'حساب جديد',
+    fldName:'الاسم الكامل', fldEmail:'البريد الإلكتروني أو رقم الجوال', fldPassword:'كلمة المرور', forgot:'نسيت كلمة المرور؟',
+    authCtaLogin:'تسجيل الدخول', authCtaSignup:'إنشاء الحساب', orWith:'أو المتابعة عبر', terms:'بالمتابعة أنت توافق على شروط الاستخدام وسياسة الخصوصية.',
+    permTitle:'اسمح للمحة بقراءة إشعاراتك', permBody:'تعالج لمحة إشعاراتك على جهازك لتلخّصها وترتّبها. بياناتك تبقى لك وحدك.',
+    permRow1:'قراءة الإشعارات الواردة', permRow1s:'من التطبيقات التي تختارها', permRow2:'تلخيص وتصنيف تلقائي', permRow2s:'المهم يظهر أولاً بلمحة', permRow3:'خصوصية كاملة', permRow3s:'المعالجة محلية ولا تُشارك بياناتك',
+    permAllow:'السماح بالوصول', permLater:'ليس الآن',
+    connTitle:'اربط مصادرك', connSub:'اختر الجهات التي تريد أن تجمع لمحة إشعاراتها في مكان واحد.', connContinue:'متابعة', connSkip:'تخطّي الآن',
+    lockDate:'الاثنين ٩ سبتمبر', pushApp:'لمحة', pushNow:'الآن', pushTitle:'٤ إشعارات جديدة تنتظرك', pushBody:'إيداع SAR 2,450 من البنك الأهلي، وتحديث بيانات عاجل.', pushHint:'هكذا ستصلك تنبيهات لمحة على شاشة القفل', pushOpen:'افتح لمحة',
+    weekdays:['أحد','إثن','ثلا','أرب','خمي','جمع','سبت']
+  },
+  en: {
+    previewTitle:'Lamha — Interactive Prototype', paletteTitle:'Try palettes', paletteHint:'Tap any palette to apply it instantly to the app and the logo.',
+    langSwitch:'ع', appName:'Lamha', tagline:'Everything that matters, in one glance', start:'Get started', login:'Log in',
+    filter:'Filter', searchPlaceholder:'Search a notification, sender, word or question..', domain:'Domain:', brief:'Lamha brief', today:'Today',
+    briefBody:'We gathered your notifications from 6 sources and flagged what matters.', n1:'1', n2:'2', n3:'3', n5:'5', n9:'9',
+    urgentPl:'Urgent', banksPl:'Banks', offerPl:'Offer', topNow:'Top now',
+    search:'Search', searchQuery:'Bank messages in August', smart:'Smart search', saveSearch:'Save search', results18:'18 results',
+    searchSummary:'We found 18 notifications from Al Ahli Bank in August, broken down as:', ops:'Transactions', cardsW:'Cards', statementsW:'Statements',
+    resultsW:'Results', newestFirst:'Newest first', iDep:'D', depositRes:'Deposit of SAR 2,450', aug28:'28 Aug', iCard:'P', cardPurchase:'Card purchase', aug21:'21 Aug',
+    iBank:'A', bankName:'Al Ahli Bank', twoHours:'2h ago', amountDeposited:'Amount deposited', from:'From', currentAcc:'Current account', to:'To', date:'Date', dateVal:'9 Sep 2026 · 10:24 AM', ref:'Reference',
+    viewRelated:'View related notifications', quickActions:'Quick actions', saveInvoice:'Save invoice', payBill:'Pay bill', transfer:'Transfer',
+    count128:'128 notifications', tabEvent:'This event', tabHistory:'Sender history', confirmOp:'Transaction confirmed', success:'Completed successfully', receipt:'Transaction receipt', min45:'45 min ago',
+    sep2026:'September 2026', depositHist:'Deposit of SAR 2,450', sep9:'9 Sep', iCardMove:'C', cardMove:'Card activity', sep5amazon:'5 Sep · Amazon', iStmt:'S', statement:'Account statement', sep1:'1 Sep', aug2026:'August 2026', iTransfer:'T', transferAcc:'Transfer between accounts',
+    settings:'Settings & Preferences', userName:'Raghad Khan', personal:'Personal information', notifPrefs:'Notification preferences', manageDomains:'Manage domains & categories', privacy:'Privacy & Security', appearance:'Appearance', light:'Light', language:'Language', langVal:'English',
+    notifications:'Notifications', jumpDate:'Jump to date', all:'All', unread:'Unread', greeting:'Good morning, Raghad', greetingSub:'2 important notifications need your attention today',
+    allGood:'All caught up', allGoodSub:'No unread notifications in this domain. You reviewed everything at a glance.', showAll:'Show all',
+    jumpTitle:'Jump to a date', month:'September 2026', quickJumps:'Quick jumps', todayJ:'Today', thisWeek:'This week', thisMonth:'This month', augustJ:'August', viewResults:'View results',
+    home:'Home', allNotifs:'All notifications', settingsShort:'Settings', logout:'Log out', more:'More',
+    chooseDomain:'Choose a domain', domainsCount:'7 domains', applyDomain:'Apply domain', pushLabel:'Push alerts', soundLabel:'Alert sound', priorityLabel:'Priority only', darkV:'Dark',
+    authWelcome:'Welcome to Lamha', authSub:'Log in or create an account to start', tabLogin:'Log in', tabSignup:'Sign up',
+    fldName:'Full name', fldEmail:'Email or phone number', fldPassword:'Password', forgot:'Forgot password?',
+    authCtaLogin:'Log in', authCtaSignup:'Create account', orWith:'or continue with', terms:'By continuing you agree to the Terms of Use and Privacy Policy.',
+    permTitle:'Let Lamha read your notifications', permBody:'Lamha processes your notifications on your device to summarize and organize them. Your data stays yours.',
+    permRow1:'Read incoming alerts', permRow1s:'from the apps you choose', permRow2:'Auto summary & sorting', permRow2s:'what matters shows first, at a glance', permRow3:'Full privacy', permRow3s:'processed locally, never shared',
+    permAllow:'Allow access', permLater:'Not now',
+    connTitle:'Connect your sources', connSub:'Choose the senders whose alerts Lamha should gather in one place.', connContinue:'Continue', connSkip:'Skip for now',
+    lockDate:'Monday, 9 September', pushApp:'Lamha', pushNow:'now', pushTitle:'4 new alerts waiting for you', pushBody:'SAR 2,450 deposit from Al Ahli Bank, and an urgent update.', pushHint:'This is how Lamha alerts reach your lock screen', pushOpen:'Open Lamha',
+    weekdays:['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+  }
+};
+
+/* --------------------------- Helpers ------------------------------ */
+function setState(patch) {
+  Object.assign(App.state, patch);
+  render();
+}
+function go(s) { setState({ screen: s, domainsOpen: false, menuOpen: false }); }
+function showToast(m) {
+  setState({ toast: m });
+  clearTimeout(App._tt);
+  App._tt = setTimeout(function () { setState({ toast: '' }); }, 1800);
+}
+function toArabicNum(n) {
+  return App.state.lang === 'ar'
+    ? ('' + n).replace(/\d/g, function (d) { return '٠١٢٣٤٥٦٧٨٩'[d]; })
+    : ('' + n);
+}
+function softMix(c, p) { return 'color-mix(in srgb, ' + c + ' ' + p + '%, #FFF)'; }
+function esc(s) { return ('' + s).replace(/"/g, '&quot;'); }
+
+/* The Lamha logo mark (colors driven by CSS vars) */
+function logo(size) {
+  return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 96 96" fill="none">'
+    + '<rect width="96" height="96" rx="26" fill="var(--pr,#0F7A5A)"></rect>'
+    + '<rect x="20" y="26" width="56" height="11" rx="5.5" fill="#FFFFFF"></rect>'
+    + '<rect x="34" y="43" width="42" height="11" rx="5.5" fill="var(--ac,#FFB020)"></rect>'
+    + '<rect x="52" y="60" width="24" height="11" rx="5.5" fill="var(--mint,#2FD08A)"></rect>'
+    + '<circle cx="28" cy="65.5" r="8" fill="var(--ink,#FF4757)"></circle></svg>';
+}
+
+/* ---------------------- Computed view model ----------------------- */
+function computeVals() {
+  var st = App.state;
+  var lang = st.lang;
+  var t = T[lang];
+  var s = st.screen;
+  var dom = st.domain;
+  var pal = PALETTES.find(function (p) { return p.id === st.palette; }) || PALETTES[0];
+  var dark = st.darkMode;
+  var dcol = { all:pal.pr, banks:pal.pr, telecom:pal.mint, shop:pal.ac, delivery:pal.pr2, health:pal.ink, travel:pal.mint };
+  var visible = NOTIFS.filter(function (n) { return n.domains.indexOf(dom) !== -1; });
+  var activeDomain = DOMAINS.find(function (d) { return d.key === dom; }) || DOMAINS[0];
+  var unreadIds = ['bank', 'deposit', 'offer'];
+  var prioF = function (a) { return st.priorityOnly ? a.filter(function (n) { return n.bK; }) : a; };
+  var shown = prioF(visible);
+  var listBase = prioF(visible.filter(function (n) {
+    return st.listFilter === 'all' || unreadIds.indexOf(n.id) !== -1;
+  }));
+  var badge = function (k) {
+    return k === 'urgent' ? (lang === 'ar' ? 'عاجل' : 'Urgent')
+      : k === 'worth' ? (lang === 'ar' ? 'يستحق انتباهك' : 'Worth a look') : '';
+  };
+  var mapN = function (n) {
+    var key = n.domains[1] || 'all';
+    var c = dcol[key] || pal.pr;
+    var urgent = n.bK === 'urgent', worth = n.bK === 'worth';
+    return {
+      id: n.id,
+      initial: n[lang === 'ar' ? 'iAr' : 'iEn'],
+      avBg: urgent ? pal.ink : worth ? pal.ac : softMix(c, 16),
+      avColor: urgent ? '#FFF' : worth ? '#231708' : c,
+      title: n[lang === 'ar' ? 'titleAr' : 'titleEn'],
+      sub: n[lang === 'ar' ? 'subAr' : 'subEn'],
+      time: n[lang === 'ar' ? 'tAr' : 'tEn'],
+      badge: badge(n.bK),
+      badgeBg: urgent ? pal.ink : worth ? pal.ac : 'transparent',
+      badgeColor: urgent ? '#FFF' : '#231708',
+      bg: urgent ? softMix(pal.ink, 8) : worth ? softMix(pal.ac, 12) : 'var(--surf,#FFF)',
+      border: urgent ? softMix(pal.ink, 32) : worth ? softMix(pal.ac, 38) : 'var(--line,#EFE8DC)',
+      time2: (n[lang === 'ar' ? 'tAr' : 'tEn']) || t.today,
+      unread: unreadIds.indexOf(n.id) !== -1,
+      rail: unreadIds.indexOf(n.id) !== -1 ? pal.pr : 'transparent'
+    };
+  };
+
+  // calendar
+  var active = 9, dotDay = 18, lead = 1;
+  var calDays = [];
+  for (var i = 0; i < 35; i++) {
+    var num = i - lead + 1;
+    if (num < 1 || num > 30) {
+      calDays.push({ num: '', bg: 'transparent', color: 'transparent', weight: '400', dot: false });
+    } else {
+      calDays.push({
+        num: toArabicNum(num),
+        bg: num === active ? pal.pr : 'transparent',
+        color: num === active ? '#FFF' : (dark ? '#EAF3EE' : '#10221B'),
+        weight: num === active ? '700' : '400',
+        dot: num === dotDay
+      });
+    }
+  }
+
+  var connectedCount = Object.keys(st.connected).filter(function (k) { return st.connected[k]; }).length;
+
+  return {
+    t: t,
+    lang: lang,
+    dir: lang === 'ar' ? 'rtl' : 'ltr',
+    arrowFlip: lang === 'ar' ? '1' : '-1',
+    themeVars: '--pr:' + pal.pr + ';--pr2:' + pal.pr2 + ';--dk:' + pal.dk + ';--ac:' + pal.ac
+      + ';--mint:' + pal.mint + ';--ink:' + pal.ink
+      + ';--bg:' + (dark ? '#111C17' : '#F4EEE2')
+      + ';--surf:' + (dark ? '#1C2E27' : '#FFFFFF')
+      + ';--txt:' + (dark ? '#EAF3EE' : '#10221B')
+      + ';--head:' + (dark ? '#EAF3EE' : pal.dk)
+      + ';--line:' + (dark ? '#2C3E35' : '#EFE8DC')
+      + ';--sub:' + (dark ? '#A9BCB2' : '#4A5B52') + ';',
+    pal: pal, dcol: dcol,
+    cPr: pal.pr, cAc: pal.ac, cMint: pal.mint, cInk: pal.ink, cDk: pal.dk,
+    activePaletteName: lang === 'ar' ? pal.ar : pal.en,
+    isOnboarding: s === 'onboarding', isHome: s === 'home', isSearch: s === 'search',
+    isDetails: s === 'details', isThread: s === 'thread', isSettings: s === 'settings',
+    isList: s === 'list', isCalendar: s === 'calendar', isAuth: s === 'auth',
+    isPermission: s === 'permission', isConnect: s === 'connect', isLock: s === 'lock',
+    showNav: ['home', 'settings', 'thread', 'list', 'search'].indexOf(s) !== -1,
+    authIsLogin: st.authMode === 'login', authIsSignup: st.authMode === 'signup',
+    authCta: st.authMode === 'login' ? t.authCtaLogin : t.authCtaSignup,
+    authLoginBg: st.authMode === 'login' ? '#FFFFFF' : 'transparent',
+    authLoginColor: st.authMode === 'login' ? pal.dk : '#8A968F',
+    authSignupBg: st.authMode === 'signup' ? '#FFFFFF' : 'transparent',
+    authSignupColor: st.authMode === 'signup' ? pal.dk : '#8A968F',
+    connectedCount: connectedCount,
+    connectedLabel: lang === 'ar'
+      ? (toArabicNum(connectedCount) + ' مصادر مفعّلة')
+      : (connectedCount + ' sources connected'),
+    toast: st.toast,
+    menuOpen: st.menuOpen, domainsOpen: st.domainsOpen,
+    pushTrack: st.push ? pal.pr : '#C9C1B0', pushAlign: st.push ? 'flex-end' : 'flex-start',
+    soundTrack: st.sound ? pal.pr : '#C9C1B0', soundAlign: st.sound ? 'flex-end' : 'flex-start',
+    priorityTrack: st.priorityOnly ? pal.pr : '#C9C1B0', priorityAlign: st.priorityOnly ? 'flex-end' : 'flex-start',
+    lightBg: !dark ? pal.pr : 'transparent', lightColor: !dark ? '#FFF' : '#8A968F',
+    darkBg: dark ? pal.pr : 'transparent', darkColor: dark ? '#FFF' : '#8A968F',
+    listAllBg: st.listFilter === 'all' ? pal.pr : '#FFF', listAllColor: st.listFilter === 'all' ? '#FFF' : '#4A5B52', listAllBorder: st.listFilter === 'all' ? pal.pr : '#E4DCCB',
+    listUnreadBg: st.listFilter === 'unread' ? pal.pr : '#FFF', listUnreadColor: st.listFilter === 'unread' ? '#FFF' : '#4A5B52', listUnreadBorder: st.listFilter === 'unread' ? pal.pr : '#E4DCCB',
+    listEmpty: listBase.length === 0, listHasItems: listBase.length > 0,
+    listNotifs: listBase.map(mapN),
+    activeDomainLabel: lang === 'ar' ? activeDomain.ar : activeDomain.en,
+    activeCount: toArabicNum(activeDomain.count),
+    visibleCountLabel: lang === 'ar' ? (toArabicNum(shown.length) + ' إشعار') : (shown.length + ' notifications'),
+    visibleNotifs: shown.map(mapN),
+    navHomeColor: s === 'home' ? pal.pr : '#9AA69F',
+    navListColor: s === 'list' ? pal.pr : '#9AA69F',
+    navSearchColor: s === 'search' ? pal.pr : '#9AA69F',
+    navMoreColor: (s === 'settings' || s === 'thread') ? pal.pr : '#9AA69F',
+    tabIsThread: st.tab === 'thread', tabIsHistory: st.tab === 'history',
+    threadTabBg: st.tab === 'thread' ? '#FFFFFF' : 'transparent', threadTabColor: st.tab === 'thread' ? pal.dk : '#8A968F',
+    historyTabBg: st.tab === 'history' ? '#FFFFFF' : 'transparent', historyTabColor: st.tab === 'history' ? pal.dk : '#8A968F',
+    weekdays: t.weekdays, calDays: calDays,
+    sources: DOMAINS.filter(function (d) { return d.key !== 'all'; }).map(function (d) {
+      var on = st.connected[d.key];
+      var c = dcol[d.key] || pal.pr;
+      return {
+        key: d.key,
+        label: lang === 'ar' ? d.ar : d.en,
+        sub: lang === 'ar' ? (toArabicNum(d.count) + ' إشعار حتى الآن') : (d.count + ' alerts so far'),
+        icon: ICON[d.icon], iconBg: softMix(c, 15), iconColor: c,
+        track: on ? pal.pr : '#C9C1B0', align: on ? 'flex-end' : 'flex-start'
+      };
+    }),
+    palettes: PALETTES.map(function (p) {
+      return {
+        id: p.id, name: lang === 'ar' ? p.ar : p.en,
+        c0: p.sw[0], c1: p.sw[1], c2: p.sw[2], c3: p.sw[3], c4: p.sw[4],
+        ring: p.id === st.palette ? p.pr : '#EDE6D9',
+        labelColor: p.id === st.palette ? p.pr : '#4A5B52'
+      };
+    }),
+    domains: DOMAINS.map(function (d) {
+      var on = d.key === dom;
+      var c = dcol[d.key] || pal.pr;
+      return {
+        key: d.key, label: lang === 'ar' ? d.ar : d.en, count: toArabicNum(d.count),
+        icon: ICON[d.icon],
+        bg: on ? pal.dk : softMix(c, 15),
+        iconColor: on ? '#FFF' : c,
+        labelColor: on ? '#FFF' : 'var(--txt,#10221B)',
+        countColor: on ? 'rgba(255,255,255,.75)' : c
+      };
+    })
+  };
+}
+
+/* ----------------------------- Views ------------------------------ */
+function screenOnboarding(v) {
+  var t = v.t;
+  return '<div style="position:absolute; inset:0; background:linear-gradient(180deg,var(--bg,#F4EEE2) 0%,#EAF6EF 100%); display:flex; flex-direction:column; animation:lm-fade .3s ease;">'
+    + '<div style="position:absolute; top:10px; inset-inline-end:18px;"><button data-act="toggleLang" style="background:rgba(255,255,255,.7);border:1px solid var(--line,#E4DCCB);border-radius:999px;padding:6px 13px;font-family:\'Readex Pro\';font-weight:600;font-size:12px;color:var(--pr,#0F7A5A);cursor:pointer;">' + t.langSwitch + '</button></div>'
+    + '<div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 34px; gap:24px;">'
+    + logo(86)
+    + '<div style="display:flex; flex-direction:column; align-items:center; gap:8px;"><div style="font-family:\'Readex Pro\'; font-weight:700; font-size:38px; color:var(--head,#073A2A);">' + t.appName + '</div><div style="font-size:15px; color:var(--pr,#0F7A5A); font-weight:500; text-align:center;">' + t.tagline + '</div></div>'
+    + '<div style="width:100%; background:var(--surf,#FFF); border-radius:24px; box-shadow:0 14px 34px -14px rgba(16,34,27,.25); padding:16px; display:flex; flex-direction:column; gap:11px;">'
+    + '<div style="display:flex; align-items:center; gap:10px;"><div style="width:36px;height:36px;border-radius:11px;background:var(--ink,#FF4757);flex-shrink:0;"></div><div style="flex:1;display:flex;flex-direction:column;gap:5px;"><div style="height:8px;width:70%;background:var(--line,#EDE6D9);border-radius:4px;"></div><div style="height:7px;width:45%;background:var(--line,#EDE6D9);border-radius:4px;"></div></div></div>'
+    + '<div style="display:flex; align-items:center; gap:10px;"><div style="width:36px;height:36px;border-radius:11px;background:var(--ac,#FFB020);flex-shrink:0;"></div><div style="flex:1;display:flex;flex-direction:column;gap:5px;"><div style="height:8px;width:60%;background:var(--line,#EDE6D9);border-radius:4px;"></div><div style="height:7px;width:40%;background:var(--line,#EDE6D9);border-radius:4px;"></div></div></div>'
+    + '<div style="display:flex; align-items:center; gap:10px;"><div style="width:36px;height:36px;border-radius:11px;background:var(--pr,#0F7A5A);flex-shrink:0;"></div><div style="flex:1;display:flex;flex-direction:column;gap:5px;"><div style="height:8px;width:75%;background:var(--line,#EDE6D9);border-radius:4px;"></div><div style="height:7px;width:50%;background:var(--line,#EDE6D9);border-radius:4px;"></div></div></div>'
+    + '</div></div>'
+    + '<div style="padding:0 30px 26px; display:flex; flex-direction:column; gap:12px;">'
+    + '<div style="display:flex; gap:6px; justify-content:center; margin-bottom:6px;"><span style="width:20px;height:6px;border-radius:3px;background:var(--pr,#0F7A5A);"></span><span style="width:6px;height:6px;border-radius:3px;background:#CBBFA9;"></span><span style="width:6px;height:6px;border-radius:3px;background:#CBBFA9;"></span></div>'
+    + '<button data-act="goSignup" style="background:var(--pr,#0F7A5A); color:#FFF; border:none; height:52px; border-radius:15px; font-family:\'Readex Pro\'; font-weight:600; font-size:16px; cursor:pointer;">' + t.start + '</button>'
+    + '<button data-act="goLogin" style="background:transparent; color:var(--pr,#0F7A5A); border:none; height:24px; font-family:\'Readex Pro\'; font-weight:600; font-size:15px; cursor:pointer;">' + t.login + '</button>'
+    + '</div></div>';
+}
+
+function screenAuth(v) {
+  var t = v.t;
+  var nameField = v.authIsSignup
+    ? '<div style="background:var(--surf,#FFF); border:1px solid var(--line,#E4DCCB); border-radius:14px; height:50px; display:flex; align-items:center; padding:0 15px; gap:10px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9AA69F" stroke-width="2"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-1a7 7 0 0 1 14 0v1"></path></svg><input type="text" placeholder="' + esc(t.fldName) + '" style="flex:1; border:none; outline:none; background:transparent; font-family:\'IBM Plex Sans Arabic\'; font-size:14px; color:var(--txt,#10221B);"></div>'
+    : '';
+  var forgot = v.authIsLogin
+    ? '<button data-act="actForgot" style="align-self:flex-start;background:none;border:none;cursor:pointer;font-family:\'Readex Pro\';font-size:12px;color:var(--pr,#0F7A5A);font-weight:600;padding:0;">' + t.forgot + '</button>'
+    : '';
+  return '<div style="position:absolute; inset:0; background:var(--bg,#F4EEE2); display:flex; flex-direction:column; animation:lm-fade .3s ease;">'
+    + '<div style="padding:2px 20px 8px; display:flex; align-items:center; flex-shrink:0;">'
+    + '<button data-act="goOnboarding" style="width:34px;height:34px;border-radius:11px;background:var(--surf,#FFF);border:1px solid var(--line,#E4DCCB);display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--txt,#10221B)" stroke-width="2" style="transform:scaleX(' + v.arrowFlip + ');"><path d="m9 18 6-6-6-6"></path></svg></button>'
+    + '<button data-act="toggleLang" style="margin-inline-start:auto;background:var(--surf,#FFF);border:1px solid var(--line,#E4DCCB);border-radius:999px;padding:6px 13px;font-family:\'Readex Pro\';font-weight:600;font-size:12px;color:var(--pr,#0F7A5A);cursor:pointer;">' + t.langSwitch + '</button>'
+    + '</div>'
+    + '<div class="lm-scroll" style="flex:1; overflow-y:auto; padding:0 26px 22px; display:flex; flex-direction:column; gap:15px;">'
+    + '<div style="display:flex; flex-direction:column; align-items:center; gap:9px; margin-top:4px;">' + logo(58)
+    + '<div style="font-family:\'Readex Pro\'; font-weight:700; font-size:22px; color:var(--head,#073A2A);">' + t.authWelcome + '</div>'
+    + '<div style="font-size:13px; color:var(--sub,#4A5B52); text-align:center;">' + t.authSub + '</div></div>'
+    + '<div style="background:var(--line,#EAE3D6); border-radius:13px; padding:4px; display:flex;">'
+    + '<button data-act="setAuthLogin" style="flex:1;border:none;cursor:pointer;font-family:\'Readex Pro\';font-weight:600;font-size:13px;padding:10px 0;border-radius:10px;background:' + v.authLoginBg + ';color:' + v.authLoginColor + ';">' + t.tabLogin + '</button>'
+    + '<button data-act="setAuthSignup" style="flex:1;border:none;cursor:pointer;font-family:\'Readex Pro\';font-weight:600;font-size:13px;padding:10px 0;border-radius:10px;background:' + v.authSignupBg + ';color:' + v.authSignupColor + ';">' + t.tabSignup + '</button>'
+    + '</div>'
+    + '<div style="display:flex; flex-direction:column; gap:11px;">'
+    + nameField
+    + '<div style="background:var(--surf,#FFF); border:1px solid var(--line,#E4DCCB); border-radius:14px; height:50px; display:flex; align-items:center; padding:0 15px; gap:10px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9AA69F" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m3 7 9 6 9-6"></path></svg><input type="text" placeholder="' + esc(t.fldEmail) + '" style="flex:1; border:none; outline:none; background:transparent; font-family:\'IBM Plex Sans Arabic\'; font-size:14px; color:var(--txt,#10221B);"></div>'
+    + '<div style="background:var(--surf,#FFF); border:1px solid var(--line,#E4DCCB); border-radius:14px; height:50px; display:flex; align-items:center; padding:0 15px; gap:10px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9AA69F" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg><input type="password" placeholder="' + esc(t.fldPassword) + '" style="flex:1; border:none; outline:none; background:transparent; font-family:\'IBM Plex Sans Arabic\'; font-size:14px; color:var(--txt,#10221B);"></div>'
+    + forgot
+    + '</div>'
+    + '<button data-act="submitAuth" style="background:var(--pr,#0F7A5A); color:#FFF; border:none; height:52px; border-radius:15px; font-family:\'Readex Pro\'; font-weight:600; font-size:16px; cursor:pointer;">' + v.authCta + '</button>'
+    + '<div style="display:flex; align-items:center; gap:12px; color:var(--sub,#B8AD98); font-size:12px;"><span style="flex:1; height:1px; background:var(--line,#E4DCCB);"></span>' + t.orWith + '<span style="flex:1; height:1px; background:var(--line,#E4DCCB);"></span></div>'
+    + '<div style="display:flex; gap:11px;">'
+    + '<button data-act="actSocial" style="flex:1;height:48px;border:1px solid var(--line,#E4DCCB);border-radius:13px;background:var(--surf,#FFF);cursor:pointer;font-family:\'Readex Pro\';font-weight:700;color:#4285F4;font-size:16px;">G</button>'
+    + '<button data-act="actSocial" style="flex:1;height:48px;border:1px solid var(--line,#E4DCCB);border-radius:13px;background:var(--surf,#FFF);cursor:pointer;font-size:20px;color:var(--txt,#10221B);"></button>'
+    + '<button data-act="actSocial" style="flex:1;height:48px;border:1px solid var(--line,#E4DCCB);border-radius:13px;background:var(--surf,#FFF);cursor:pointer;font-family:\'Readex Pro\';font-weight:700;color:#00A4EF;font-size:15px;">⊞</button>'
+    + '</div>'
+    + '<div style="font-size:11px; color:var(--sub,#8A968F); text-align:center; line-height:1.7;">' + t.terms + '</div>'
+    + '</div></div>';
+}
+
+function screenPermission(v) {
+  var t = v.t;
+  return '<div style="position:absolute; inset:0; background:linear-gradient(180deg,var(--bg,#F4EEE2) 0%,#EAF6EF 100%); display:flex; flex-direction:column; animation:lm-fade .3s ease;">'
+    + '<div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 30px; gap:22px;">'
+    + '<div style="position:relative; width:112px; height:112px; border-radius:34px; background:var(--surf,#FFF); box-shadow:0 18px 40px -16px rgba(16,34,27,.3); display:flex; align-items:center; justify-content:center;">'
+    + '<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.6"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>'
+    + '<div style="position:absolute; bottom:-6px; inset-inline-end:-6px; width:40px; height:40px; border-radius:14px; background:var(--pr,#0F7A5A); display:flex; align-items:center; justify-content:center; border:3px solid var(--bg,#F4EEE2);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFF" stroke-width="2.4"><path d="M20 6 9 17l-5-5"></path></svg></div>'
+    + '</div>'
+    + '<div style="display:flex; flex-direction:column; align-items:center; gap:9px;"><div style="font-family:\'Readex Pro\'; font-weight:700; font-size:22px; color:var(--head,#073A2A); text-align:center; line-height:1.4;">' + t.permTitle + '</div><div style="font-size:14px; color:var(--sub,#4A5B52); text-align:center; line-height:1.8; max-width:280px;">' + t.permBody + '</div></div>'
+    + '<div style="width:100%; background:var(--surf,#FFF); border-radius:20px; padding:16px; display:flex; flex-direction:column; gap:14px;">'
+    + '<div style="display:flex; align-items:center; gap:12px;"><div style="width:40px;height:40px;border-radius:12px;background:#EAF6EF;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.8"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path></svg></div><div style="flex:1; display:flex; flex-direction:column; gap:2px;"><span style="font-size:13px; font-weight:600; color:var(--txt,#10221B);">' + t.permRow1 + '</span><span style="font-size:11px; color:var(--sub,#8A968F);">' + t.permRow1s + '</span></div></div>'
+    + '<div style="display:flex; align-items:center; gap:12px;"><div style="width:40px;height:40px;border-radius:12px;background:#FFF9EC;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#B77A00" stroke-width="1.8"><path d="M13 2 3 14h9l-1 8 10-12h-9z"></path></svg></div><div style="flex:1; display:flex; flex-direction:column; gap:2px;"><span style="font-size:13px; font-weight:600; color:var(--txt,#10221B);">' + t.permRow2 + '</span><span style="font-size:11px; color:var(--sub,#8A968F);">' + t.permRow2s + '</span></div></div>'
+    + '<div style="display:flex; align-items:center; gap:12px;"><div style="width:40px;height:40px;border-radius:12px;background:#EAF6EF;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.8"><rect x="3" y="11" width="18" height="10" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></div><div style="flex:1; display:flex; flex-direction:column; gap:2px;"><span style="font-size:13px; font-weight:600; color:var(--txt,#10221B);">' + t.permRow3 + '</span><span style="font-size:11px; color:var(--sub,#8A968F);">' + t.permRow3s + '</span></div></div>'
+    + '</div></div>'
+    + '<div style="padding:0 30px 26px; display:flex; flex-direction:column; gap:11px;">'
+    + '<button data-act="allowPerm" style="background:var(--pr,#0F7A5A); color:#FFF; border:none; height:52px; border-radius:15px; font-family:\'Readex Pro\'; font-weight:600; font-size:16px; cursor:pointer;">' + t.permAllow + '</button>'
+    + '<button data-act="laterPerm" style="background:transparent; color:var(--sub,#4A5B52); border:none; height:26px; font-family:\'Readex Pro\'; font-weight:600; font-size:14px; cursor:pointer;">' + t.permLater + '</button>'
+    + '</div></div>';
+}
+
+function screenConnect(v) {
+  var t = v.t;
+  var rows = v.sources.map(function (src) {
+    return '<div style="background:var(--surf,#FFF); border:1px solid var(--line,#EFE8DC); border-radius:16px; padding:12px 14px; display:flex; align-items:center; gap:12px;">'
+      + '<span style="width:42px;height:42px;border-radius:13px;background:' + src.iconBg + ';color:' + src.iconColor + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + src.icon + '</span>'
+      + '<div style="flex:1; display:flex; flex-direction:column; gap:2px; min-width:0;"><span style="font-size:14px; font-weight:600; color:var(--txt,#10221B);">' + src.label + '</span><span style="font-size:11px; color:var(--sub,#8A968F);">' + src.sub + '</span></div>'
+      + '<button data-act="toggleSource" data-key="' + src.key + '" style="width:44px;height:26px;border-radius:999px;background:' + src.track + ';border:none;cursor:pointer;display:flex;align-items:center;justify-content:' + src.align + ';padding:3px;box-sizing:border-box;flex-shrink:0;"><span style="width:20px;height:20px;border-radius:50%;background:#FFF;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span></button>'
+      + '</div>';
+  }).join('');
+  return '<div style="position:absolute; inset:0; background:var(--bg,#F4EEE2); display:flex; flex-direction:column; animation:lm-fade .3s ease;">'
+    + '<div style="padding:2px 22px 12px; display:flex; flex-direction:column; gap:6px; flex-shrink:0;">'
+    + '<div style="display:flex; gap:6px;"><span style="flex:1;height:5px;border-radius:3px;background:var(--pr,#0F7A5A);"></span><span style="flex:1;height:5px;border-radius:3px;background:var(--pr,#0F7A5A);"></span><span style="flex:1;height:5px;border-radius:3px;background:var(--pr,#0F7A5A);"></span></div>'
+    + '<div style="font-family:\'Readex Pro\'; font-weight:700; font-size:21px; color:var(--head,#073A2A); margin-top:8px;">' + t.connTitle + '</div>'
+    + '<div style="font-size:13px; color:var(--sub,#4A5B52); line-height:1.7;">' + t.connSub + '</div></div>'
+    + '<div class="lm-scroll" style="flex:1; overflow-y:auto; padding:4px 22px 12px; display:flex; flex-direction:column; gap:10px;">' + rows + '</div>'
+    + '<div style="padding:12px 22px 24px; display:flex; flex-direction:column; gap:10px; flex-shrink:0;">'
+    + '<div style="text-align:center; font-size:12px; color:var(--pr,#0F7A5A); font-weight:600;">' + v.connectedLabel + '</div>'
+    + '<button data-act="connectContinue" style="background:var(--pr,#0F7A5A); color:#FFF; border:none; height:52px; border-radius:15px; font-family:\'Readex Pro\'; font-weight:600; font-size:16px; cursor:pointer;">' + t.connContinue + '</button>'
+    + '<button data-act="connectContinue" style="background:transparent; color:var(--sub,#4A5B52); border:none; height:24px; font-family:\'Readex Pro\'; font-weight:600; font-size:14px; cursor:pointer;">' + t.connSkip + '</button>'
+    + '</div></div>';
+}
+
+function screenLock(v) {
+  var t = v.t;
+  return '<div style="position:absolute; inset:0; background:linear-gradient(165deg,var(--dk,#073A2A) 0%,#0B1F17 100%); display:flex; flex-direction:column; align-items:center; animation:lm-fade .3s ease;">'
+    + '<div style="margin-top:34px; display:flex; flex-direction:column; align-items:center; gap:4px;"><span style="font-family:\'Readex Pro\'; font-weight:300; font-size:62px; color:#FFF; line-height:1;">9:41</span><span style="font-size:14px; color:rgba(255,255,255,.7);">' + t.lockDate + '</span></div>'
+    + '<div style="flex:1; display:flex; flex-direction:column; justify-content:center; width:100%; padding:0 16px; gap:14px;">'
+    + '<div style="text-align:center; font-size:12px; color:rgba(255,255,255,.6); font-weight:600;">' + t.pushHint + '</div>'
+    + '<button data-act="openApp" style="width:100%; text-align:start; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.16); border-radius:20px; padding:14px; display:flex; flex-direction:column; gap:9px; cursor:pointer; animation:lm-slide .4s ease;">'
+    + '<div style="display:flex; align-items:center; gap:9px;">' + logo(24)
+    + '<span style="font-family:\'Readex Pro\'; font-weight:700; font-size:13px; color:#FFF; letter-spacing:.5px;">' + t.pushApp + '</span>'
+    + '<span style="margin-inline-start:auto; font-size:11px; color:rgba(255,255,255,.6);">' + t.pushNow + '</span></div>'
+    + '<span style="font-size:15px; font-weight:600; color:#FFF;">' + t.pushTitle + '</span>'
+    + '<span style="font-size:13px; color:rgba(255,255,255,.85); line-height:1.6;">' + t.pushBody + '</span>'
+    + '</button></div>'
+    + '<div style="padding:0 30px 30px; width:100%; box-sizing:border-box;"><button data-act="openApp" style="width:100%; background:var(--surf,#FFF); color:var(--pr,#0F7A5A); border:none; height:52px; border-radius:15px; font-family:\'Readex Pro\'; font-weight:600; font-size:16px; cursor:pointer;">' + t.pushOpen + '</button></div>'
+    + '</div>';
+}
+
+function notifCard(n) {
+  var badge = n.badge
+    ? '<span style="background:' + n.badgeBg + ';color:' + n.badgeColor + ';font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;width:fit-content;">' + n.badge + '</span>'
+    : '';
+  return '<button data-act="openNotif" data-id="' + n.id + '" style="text-align:start; border:1px solid ' + n.border + '; background:' + n.bg + '; border-radius:16px; padding:13px; display:flex; align-items:center; gap:11px; cursor:pointer; animation:lm-slide .25s ease;">'
+    + '<div style="width:40px;height:40px;border-radius:12px;background:' + n.avBg + ';color:' + n.avColor + ';display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">' + n.initial + '</div>'
+    + '<div style="flex:1; display:flex; flex-direction:column; gap:3px; min-width:0;">' + badge
+    + '<span style="font-size:13px;font-weight:600;color:var(--txt,#10221B);">' + n.title + '</span>'
+    + '<span style="font-size:11px;color:var(--sub,#8A968F);">' + n.sub + '</span></div>'
+    + '<span style="font-size:11px;color:var(--sub,#8A968F);flex-shrink:0;">' + n.time + '</span></button>';
+}
+
+function screenHome(v) {
+  var t = v.t;
+  var cards = v.visibleNotifs.map(notifCard).join('');
+  return '<div style="position:absolute; inset:0; display:flex; flex-direction:column; animation:lm-fade .3s ease;">'
+    + '<div style="padding:2px 18px 12px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">'
+    + '<div style="display:flex; align-items:center; gap:8px;">' + logo(25) + '<span style="font-family:\'Readex Pro\'; font-weight:700; font-size:18px; color:var(--head,#073A2A);">' + t.appName + '</span></div>'
+    + '<div style="display:flex; align-items:center; gap:8px;">'
+    + '<button data-act="toggleLang" style="background:var(--surf,#FFF);border:1px solid var(--line,#E4DCCB);border-radius:999px;padding:6px 10px;font-family:\'Readex Pro\';font-weight:600;font-size:11px;color:var(--pr,#0F7A5A);cursor:pointer;">' + t.langSwitch + '</button>'
+    + '<button data-act="openDomains" title="' + esc(t.filter) + '" style="width:36px;height:36px;border-radius:12px;background:var(--surf,#FFF);border:1px solid var(--line,#E4DCCB);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.9"><path d="M3 4h18l-7 8v6l-4 2v-8z"></path></svg><span style="position:absolute;top:-4px;inset-inline-start:-4px;background:var(--ac,#FFB020);color:var(--txt,#10221B);font-size:9px;font-weight:700;min-width:15px;height:15px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 3px;">' + v.activeCount + '</span></button>'
+    + '<button data-act="openMenu" style="width:31px;height:31px;border-radius:50%;background:var(--ac,#FFB020);border:none;cursor:pointer;"></button>'
+    + '</div></div>'
+    + '<div style="padding:0 18px 12px; flex-shrink:0;"><button data-act="goSearch" style="width:100%;background:var(--surf,#FFF); border:1px solid var(--line,#E4DCCB); border-radius:14px; height:46px; display:flex; align-items:center; padding:0 16px; gap:10px; cursor:pointer;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9AA69F" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg><span style="font-size:14px; color:var(--sub,#8A968F);">' + t.searchPlaceholder + '</span></button></div>'
+    + '<div style="padding:0 18px 12px; flex-shrink:0; display:flex; align-items:center; justify-content:space-between;">'
+    + '<div style="display:flex; align-items:center; gap:7px;"><span style="font-size:13px; color:var(--sub,#8A968F);">' + t.domain + '</span><button data-act="openDomains" style="background:var(--dk,#073A2A); color:#FFF; font-size:12px; font-weight:600; padding:7px 13px; border-radius:11px; border:none; cursor:pointer; display:flex; align-items:center; gap:6px;">' + v.activeDomainLabel + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.4" opacity=".7"><path d="m6 9 6 6 6-6"></path></svg></button></div>'
+    + '<span style="background:#FFF9EC; color:#B77A00; font-size:11px; font-weight:600; padding:5px 11px; border-radius:999px;">' + v.visibleCountLabel + '</span></div>'
+    + '<div class="lm-scroll" style="flex:1; overflow-y:auto; padding:0 18px 16px; display:flex; flex-direction:column; gap:11px;">'
+    + '<div style="background:linear-gradient(135deg,var(--pr,#0F7A5A),var(--pr2,#0B5E45)); border-radius:18px; padding:16px; display:flex; flex-direction:column; gap:12px;">'
+    + '<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:15px;">✦</span><span style="font-family:\'Readex Pro\'; font-weight:600; font-size:14px; color:#FFF;">' + t.brief + '</span><span style="margin-inline-start:auto; background:rgba(255,255,255,.16); color:#FFF; font-size:10px; padding:3px 9px; border-radius:999px;">' + t.today + '</span></div>'
+    + '<div style="font-size:13px; color:#FFFFFF; opacity:.92; line-height:1.7;">' + t.briefBody + '</div>'
+    + '<div style="display:flex; gap:8px;">'
+    + '<div style="flex:1; background:rgba(255,255,255,.14); border-radius:12px; padding:9px; display:flex; flex-direction:column; gap:2px;"><span style="font-family:\'Readex Pro\'; font-weight:700; font-size:18px; color:#FFF;">' + t.n2 + '</span><span style="font-size:11px; color:#FFFFFF; opacity:.8;">' + t.urgentPl + '</span></div>'
+    + '<div style="flex:1; background:rgba(255,255,255,.14); border-radius:12px; padding:9px; display:flex; flex-direction:column; gap:2px;"><span style="font-family:\'Readex Pro\'; font-weight:700; font-size:18px; color:#FFF;">' + t.n3 + '</span><span style="font-size:11px; color:#FFFFFF; opacity:.8;">' + t.banksPl + '</span></div>'
+    + '<div style="flex:1; background:rgba(255,255,255,.14); border-radius:12px; padding:9px; display:flex; flex-direction:column; gap:2px;"><span style="font-family:\'Readex Pro\'; font-weight:700; font-size:18px; color:var(--ac,#FFB020);">' + t.n1 + '</span><span style="font-size:11px; color:#FFFFFF; opacity:.8;">' + t.offerPl + '</span></div>'
+    + '</div></div>'
+    + '<div style="font-family:\'Readex Pro\'; font-weight:600; font-size:15px; color:var(--head,#073A2A);">' + t.topNow + '</div>'
+    + cards
+    + '</div></div>';
+}
+
+function screenSearch(v) {
+  var t = v.t;
+  return '<div style="position:absolute; inset:0; display:flex; flex-direction:column; animation:lm-fade .3s ease;">'
+    + '<div style="padding:0 18px 12px; display:flex; align-items:center; gap:12px; flex-shrink:0;"><button data-act="goHome" style="width:34px;height:34px;border-radius:11px;background:var(--surf,#FFF);border:1px solid var(--line,#E4DCCB);display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--txt,#10221B)" stroke-width="2" style="transform:scaleX(' + v.arrowFlip + ');"><path d="m9 18 6-6-6-6"></path></svg></button><span style="font-family:\'Readex Pro\'; font-weight:700; font-size:17px; color:var(--head,#073A2A);">' + t.search + '</span></div>'
+    + '<div style="padding:0 18px 12px; flex-shrink:0;"><div style="background:var(--surf,#FFF); border:1px solid var(--pr,#0F7A5A); border-radius:14px; height:48px; display:flex; align-items:center; padding:0 16px; gap:10px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg><input type="text" value="' + esc(t.searchQuery) + '" style="flex:1; border:none; outline:none; background:transparent; color:var(--txt,#10221B); font-family:\'IBM Plex Sans Arabic\'; font-size:14px;"></div></div>'
+    + '<div style="padding:0 18px 12px; display:flex; gap:8px; flex-shrink:0;">'
+    + '<button data-act="actSmart" style="background:var(--pr,#0F7A5A);color:#FFF;font-size:12px;font-weight:600;padding:8px 14px;border-radius:12px;border:none;cursor:pointer;font-family:\'Readex Pro\';">✦ ' + t.smart + '</button>'
+    + '<button data-act="openDomains" style="background:var(--surf,#FFF);color:var(--sub,#4A5B52);font-size:12px;padding:8px 14px;border-radius:12px;border:1px solid var(--line,#E4DCCB);cursor:pointer;font-family:\'Readex Pro\';">' + t.filter + '</button>'
+    + '<button data-act="actSaveSearch" style="background:var(--surf,#FFF);color:var(--sub,#4A5B52);font-size:12px;padding:8px 14px;border-radius:12px;border:1px solid var(--line,#E4DCCB);cursor:pointer;font-family:\'Readex Pro\';">' + t.saveSearch + '</button>'
+    + '</div>'
+    + '<div class="lm-scroll" style="flex:1; overflow-y:auto; padding:0 18px 16px; display:flex; flex-direction:column; gap:14px;">'
+    + '<div style="background:var(--pr,#0F7A5A); border-radius:18px; padding:16px; display:flex; flex-direction:column; gap:12px;">'
+    + '<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:15px;">✦</span><span style="font-family:\'Readex Pro\'; font-weight:600; font-size:14px; color:#FFF;">' + t.brief + '</span><span style="margin-inline-start:auto; font-size:11px; color:#FFFFFF; opacity:.75;">' + t.results18 + '</span></div>'
+    + '<div style="font-size:13px; color:#FFFFFF; opacity:.92; line-height:1.7;">' + t.searchSummary + '</div>'
+    + '<div style="display:flex; gap:8px;">'
+    + '<div style="flex:1; background:rgba(255,255,255,.14); border-radius:12px; padding:10px; display:flex; flex-direction:column; gap:2px;"><span style="font-family:\'Readex Pro\'; font-weight:700; font-size:20px; color:#FFF;">' + t.n9 + '</span><span style="font-size:11px; color:#FFFFFF; opacity:.85;">' + t.ops + '</span></div>'
+    + '<div style="flex:1; background:rgba(255,255,255,.14); border-radius:12px; padding:10px; display:flex; flex-direction:column; gap:2px;"><span style="font-family:\'Readex Pro\'; font-weight:700; font-size:20px; color:#FFF;">' + t.n5 + '</span><span style="font-size:11px; color:#FFFFFF; opacity:.85;">' + t.cardsW + '</span></div>'
+    + '<div style="flex:1; background:rgba(255,255,255,.14); border-radius:12px; padding:10px; display:flex; flex-direction:column; gap:2px;"><span style="font-family:\'Readex Pro\'; font-weight:700; font-size:20px; color:var(--ac,#FFB020);">' + t.n2 + '</span><span style="font-size:11px; color:#FFFFFF; opacity:.85;">' + t.statementsW + '</span></div>'
+    + '</div></div>'
+    + '<div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-family:\'Readex Pro\'; font-weight:600; font-size:14px; color:var(--head,#073A2A);">' + t.resultsW + '</span><span style="font-size:12px; color:var(--pr,#0F7A5A); font-weight:500;">' + t.newestFirst + '</span></div>'
+    + '<button data-act="openDetails" style="text-align:start; border:none; background:var(--surf,#FFF); border-radius:16px; padding:11px; display:flex; align-items:center; gap:11px; cursor:pointer;"><div style="width:36px;height:36px;border-radius:12px;background:#EAF6EF;color:var(--pr,#0F7A5A);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">' + t.iDep + '</div><div style="flex:1; display:flex; flex-direction:column; gap:2px;"><span style="font-size:13px;font-weight:600;">' + t.depositRes + '</span><span style="font-size:11px;color:var(--sub,#8A968F);">' + t.aug28 + '</span></div></button>'
+    + '<button data-act="openDetails" style="text-align:start; border:none; background:var(--surf,#FFF); border-radius:16px; padding:11px; display:flex; align-items:center; gap:11px; cursor:pointer;"><div style="width:36px;height:36px;border-radius:12px;background:#FFF9EC;color:#B77A00;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">' + t.iCard + '</div><div style="flex:1; display:flex; flex-direction:column; gap:2px;"><span style="font-size:13px;font-weight:600;">' + t.cardPurchase + '</span><span style="font-size:11px;color:var(--sub,#8A968F);">' + t.aug21 + '</span></div></button>'
+    + '</div></div>';
+}
+
+function screenDetails(v) {
+  var t = v.t;
+  return '<div style="position:absolute; inset:0; display:flex; flex-direction:column; animation:lm-fade .3s ease;">'
+    + '<div style="padding:0 18px 12px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">'
+    + '<button data-act="goHome" style="width:34px;height:34px;border-radius:11px;background:var(--surf,#FFF);border:1px solid var(--line,#E4DCCB);display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--txt,#10221B)" stroke-width="2" style="transform:scaleX(' + v.arrowFlip + ');"><path d="m9 18 6-6-6-6"></path></svg></button>'
+    + '<div style="display:flex; align-items:center; gap:8px;"><div style="width:30px;height:30px;border-radius:9px;background:#EAF6EF;color:var(--pr,#0F7A5A);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;">' + t.iBank + '</div><div style="display:flex; flex-direction:column;"><span style="font-size:14px;font-weight:600;">' + t.bankName + '</span><span style="font-size:10px;color:var(--sub,#8A968F);">' + t.twoHours + '</span></div></div>'
+    + '<button data-act="goThread" style="width:34px;height:34px;border-radius:11px;background:var(--surf,#FFF);border:1px solid var(--line,#E4DCCB);display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--txt,#10221B)" stroke-width="2"><circle cx="12" cy="5" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="12" cy="19" r="1.5"></circle></svg></button>'
+    + '</div>'
+    + '<div class="lm-scroll" style="flex:1; overflow-y:auto; padding:0 18px 16px; display:flex; flex-direction:column; gap:14px;">'
+    + '<div style="display:flex; flex-direction:column; gap:6px; margin-top:4px;"><span style="font-size:14px; color:var(--sub,#4A5B52);">' + t.amountDeposited + '</span><span style="font-family:\'Readex Pro\'; font-weight:700; font-size:36px; color:var(--head,#073A2A); direction:ltr; text-align:start;">SAR 2,450</span></div>'
+    + '<div style="background:var(--surf,#FFF); border-radius:18px; padding:16px; display:flex; flex-direction:column; gap:12px;">'
+    + '<div style="display:flex; justify-content:space-between;"><span style="font-size:13px;color:var(--sub,#8A968F);">' + t.from + '</span><span style="font-size:13px;font-weight:600;">' + t.currentAcc + '</span></div><div style="height:1px; background:var(--line,#EDE6D9);"></div>'
+    + '<div style="display:flex; justify-content:space-between;"><span style="font-size:13px;color:var(--sub,#8A968F);">' + t.to + '</span><span style="font-size:13px;font-weight:600; direction:ltr;">••4587</span></div><div style="height:1px; background:var(--line,#EDE6D9);"></div>'
+    + '<div style="display:flex; justify-content:space-between;"><span style="font-size:13px;color:var(--sub,#8A968F);">' + t.date + '</span><span style="font-size:13px;font-weight:600;">' + t.dateVal + '</span></div><div style="height:1px; background:var(--line,#EDE6D9);"></div>'
+    + '<div style="display:flex; justify-content:space-between;"><span style="font-size:13px;color:var(--sub,#8A968F);">' + t.ref + '</span><span style="font-size:13px;font-weight:600; direction:ltr;">#NB123456789</span></div>'
+    + '</div>'
+    + '<button data-act="goThread" style="background:var(--pr,#0F7A5A); color:#FFF; border:none; height:50px; border-radius:15px; font-family:\'Readex Pro\'; font-weight:600; font-size:15px; cursor:pointer;">' + t.viewRelated + '</button>'
+    + '<span style="font-family:\'Readex Pro\'; font-weight:600; font-size:14px; color:var(--head,#073A2A);">' + t.quickActions + '</span>'
+    + '<div style="display:flex; gap:10px;">'
+    + '<button data-act="actSave" style="flex:1; background:var(--surf,#FFF); border:none; cursor:pointer; border-radius:14px; padding:14px 8px; display:flex; flex-direction:column; align-items:center; gap:7px; font-family:\'IBM Plex Sans Arabic\';"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.8"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><path d="M17 21v-8H7v8M7 3v5h8"></path></svg><span style="font-size:11px; color:var(--txt,#10221B);">' + t.saveInvoice + '</span></button>'
+    + '<button data-act="actPay" style="flex:1; background:var(--surf,#FFF); border:none; cursor:pointer; border-radius:14px; padding:14px 8px; display:flex; flex-direction:column; align-items:center; gap:7px; font-family:\'IBM Plex Sans Arabic\';"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 10h18"></path></svg><span style="font-size:11px; color:var(--txt,#10221B);">' + t.payBill + '</span></button>'
+    + '<button data-act="actTransfer" style="flex:1; background:var(--surf,#FFF); border:none; cursor:pointer; border-radius:14px; padding:14px 8px; display:flex; flex-direction:column; align-items:center; gap:7px; font-family:\'IBM Plex Sans Arabic\';"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.8"><path d="M4 12v8h16v-8M12 3v13M8 7l4-4 4 4"></path></svg><span style="font-size:11px; color:var(--txt,#10221B);">' + t.transfer + '</span></button>'
+    + '</div>'
+    + '</div></div>';
+}
+
+function screenThread(v) {
+  var t = v.t;
+  var body;
+  if (v.tabIsThread) {
+    body = '<div class="lm-scroll" style="flex:1; overflow-y:auto; padding:2px 18px 16px; display:flex; flex-direction:column; animation:lm-slide .2s ease;">'
+      + '<div style="display:flex; gap:12px;"><div style="display:flex; flex-direction:column; align-items:center; padding-top:4px;"><div style="width:34px;height:34px;border-radius:11px;background:#EAF6EF;color:var(--pr,#0F7A5A);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">' + t.iDep + '</div><div style="flex:1; width:2px; background:var(--line,#E4DCCB); margin:4px 0;"></div></div><div style="flex:1; padding-bottom:16px;"><div style="background:var(--surf,#FFF); border-radius:16px; padding:13px; display:flex; flex-direction:column; gap:3px;"><div style="display:flex; justify-content:space-between;"><span style="font-size:13px;font-weight:600;">' + t.amountDeposited + '</span><span style="font-size:10px;color:var(--sub,#8A968F);">' + t.twoHours + '</span></div><span style="font-size:13px;color:var(--pr,#0F7A5A);font-weight:600; direction:ltr; text-align:start;">SAR 2,450</span></div></div></div>'
+      + '<div style="display:flex; gap:12px;"><div style="display:flex; flex-direction:column; align-items:center; padding-top:4px;"><div style="width:34px;height:34px;border-radius:11px;background:#EAF6EF;color:var(--pr,#0F7A5A);display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="2.5"><path d="M20 6 9 17l-5-5"></path></svg></div><div style="flex:1; width:2px; background:var(--line,#E4DCCB); margin:4px 0;"></div></div><div style="flex:1; padding-bottom:16px;"><div style="background:var(--surf,#FFF); border-radius:16px; padding:13px; display:flex; flex-direction:column; gap:3px;"><div style="display:flex; justify-content:space-between;"><span style="font-size:13px;font-weight:600;">' + t.confirmOp + '</span><span style="font-size:10px;color:var(--sub,#8A968F);">' + t.twoHours + '</span></div><span style="font-size:12px;color:var(--sub,#4A5B52);">' + t.success + '</span></div></div></div>'
+      + '<div style="display:flex; gap:12px;"><div style="display:flex; flex-direction:column; align-items:center; padding-top:4px;"><div style="width:34px;height:34px;border-radius:11px;background:#FFF9EC;color:#B77A00;display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B77A00" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path></svg></div></div><div style="flex:1;"><div style="background:var(--surf,#FFF); border-radius:16px; padding:13px; display:flex; flex-direction:column; gap:3px;"><div style="display:flex; justify-content:space-between;"><span style="font-size:13px;font-weight:600;">' + t.receipt + '</span><span style="font-size:10px;color:var(--sub,#8A968F);">' + t.min45 + '</span></div><span style="font-size:12px;color:var(--sub,#4A5B52); direction:ltr; text-align:start;">#NB123456789</span></div></div></div>'
+      + '</div>';
+  } else {
+    body = '<div class="lm-scroll" style="flex:1; overflow-y:auto; padding:2px 18px 16px; display:flex; flex-direction:column; gap:10px; animation:lm-slide .2s ease;">'
+      + '<span style="font-family:\'Readex Pro\'; font-weight:600; font-size:13px; color:var(--sub,#8A968F);">' + t.sep2026 + '</span>'
+      + '<div style="background:var(--surf,#FFF); border-radius:16px; padding:11px; display:flex; align-items:center; gap:11px;"><div style="width:36px;height:36px;border-radius:12px;background:#EAF6EF;color:var(--pr,#0F7A5A);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">' + t.iDep + '</div><div style="flex:1; display:flex; flex-direction:column; gap:2px;"><span style="font-size:13px;font-weight:600;">' + t.depositHist + '</span><span style="font-size:11px;color:var(--sub,#8A968F);">' + t.sep9 + '</span></div></div>'
+      + '<div style="background:var(--surf,#FFF); border-radius:16px; padding:11px; display:flex; align-items:center; gap:11px;"><div style="width:36px;height:36px;border-radius:12px;background:#FFF9EC;color:#B77A00;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">' + t.iCardMove + '</div><div style="flex:1; display:flex; flex-direction:column; gap:2px;"><span style="font-size:13px;font-weight:600;">' + t.cardMove + '</span><span style="font-size:11px;color:var(--sub,#8A968F);">' + t.sep5amazon + '</span></div></div>'
+      + '<div style="background:var(--surf,#FFF); border-radius:16px; padding:11px; display:flex; align-items:center; gap:11px;"><div style="width:36px;height:36px;border-radius:12px;background:#EAF6EF;color:var(--pr,#0F7A5A);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">' + t.iStmt + '</div><div style="flex:1; display:flex; flex-direction:column; gap:2px;"><span style="font-size:13px;font-weight:600;">' + t.statement + '</span><span style="font-size:11px;color:var(--sub,#8A968F);">' + t.sep1 + '</span></div></div>'
+      + '<span style="font-family:\'Readex Pro\'; font-weight:600; font-size:13px; color:var(--sub,#8A968F); margin-top:2px;">' + t.aug2026 + '</span>'
+      + '<div style="background:var(--surf,#FFF); border-radius:16px; padding:11px; display:flex; align-items:center; gap:11px;"><div style="width:36px;height:36px;border-radius:12px;background:#EAF6EF;color:var(--pr,#0F7A5A);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">' + t.iTransfer + '</div><div style="flex:1; display:flex; flex-direction:column; gap:2px;"><span style="font-size:13px;font-weight:600;">' + t.transferAcc + '</span><span style="font-size:11px;color:var(--sub,#8A968F);">' + t.aug28 + '</span></div></div>'
+      + '</div>';
+  }
+  return '<div style="position:absolute; inset:0; display:flex; flex-direction:column; animation:lm-fade .3s ease;">'
+    + '<div style="padding:0 18px 12px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">'
+    + '<button data-act="goHome" style="width:34px;height:34px;border-radius:11px;background:var(--surf,#FFF);border:1px solid var(--line,#E4DCCB);display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--txt,#10221B)" stroke-width="2" style="transform:scaleX(' + v.arrowFlip + ');"><path d="m9 18 6-6-6-6"></path></svg></button>'
+    + '<div style="display:flex; flex-direction:column; align-items:center;"><span style="font-family:\'Readex Pro\'; font-weight:700; font-size:16px; color:var(--head,#073A2A);">' + t.bankName + '</span><span style="font-size:11px; color:var(--sub,#8A968F);">' + t.count128 + '</span></div>'
+    + '<div style="width:34px;height:34px;border-radius:11px;background:#EAF6EF;display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="2"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg></div>'
+    + '</div>'
+    + '<div style="padding:0 18px 14px; flex-shrink:0;"><div style="background:#EAE3D6; border-radius:13px; padding:4px; display:flex;">'
+    + '<button data-act="setTabThread" style="flex:1; border:none; cursor:pointer; font-family:\'Readex Pro\'; font-weight:600; font-size:13px; padding:9px 0; border-radius:10px; background:' + v.threadTabBg + '; color:' + v.threadTabColor + ';">' + t.tabEvent + '</button>'
+    + '<button data-act="setTabHistory" style="flex:1; border:none; cursor:pointer; font-family:\'Readex Pro\'; font-weight:600; font-size:13px; padding:9px 0; border-radius:10px; background:' + v.historyTabBg + '; color:' + v.historyTabColor + ';">' + t.tabHistory + '</button>'
+    + '</div></div>'
+    + body
+    + '</div>';
+}
+
+function screenSettings(v) {
+  var t = v.t;
+  return '<div style="position:absolute; inset:0; display:flex; flex-direction:column; animation:lm-fade .3s ease;">'
+    + '<div style="padding:0 18px 12px; flex-shrink:0;"><span style="font-family:\'Readex Pro\'; font-weight:700; font-size:17px; color:var(--head,#073A2A);">' + t.settings + '</span></div>'
+    + '<div class="lm-scroll" style="flex:1; overflow-y:auto; padding:0 18px 16px; display:flex; flex-direction:column; gap:10px;">'
+    + '<div style="background:var(--surf,#EAF6EF); border:1px solid var(--line,#EFE8DC); border-radius:16px; padding:14px; display:flex; align-items:center; gap:12px;"><div style="width:46px;height:46px;border-radius:50%;background:var(--ac,#FFB020);"></div><div style="flex:1; display:flex; flex-direction:column; gap:2px;"><span style="font-size:15px;font-weight:600;color:var(--head,#073A2A);">' + t.userName + '</span><span style="font-size:12px;color:var(--sub,#4A5B52);">roqaya@email.com</span></div></div>'
+    + '<div style="background:var(--surf,#FFF); border-radius:16px; overflow:hidden;">'
+    + '<button data-act="actPersonal" style="width:100%;text-align:start;background:none;cursor:pointer;padding:14px; display:flex; align-items:center; gap:12px; border:none; border-bottom:1px solid var(--line,#F1EBDE);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.8"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-1a7 7 0 0 1 14 0v1"></path></svg><span style="flex:1; font-size:13px; color:var(--txt,#10221B);">' + t.personal + '</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B0A491" stroke-width="2" style="transform:scaleX(' + v.arrowFlip + ');"><path d="m9 18 6-6-6-6"></path></svg></button>'
+    + '<div style="padding:14px; display:flex; align-items:center; gap:12px; border-bottom:1px solid var(--line,#F1EBDE);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.8"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path></svg><span style="flex:1; font-size:13px; color:var(--txt,#10221B);">' + t.pushLabel + '</span><button data-act="togglePush" style="width:42px;height:25px;border-radius:999px;background:' + v.pushTrack + ';border:none;cursor:pointer;display:flex;align-items:center;justify-content:' + v.pushAlign + ';padding:3px;box-sizing:border-box;"><span style="width:19px;height:19px;border-radius:50%;background:var(--surf,#FFF);box-shadow:0 1px 3px rgba(0,0,0,.2);"></span></button></div>'
+    + '<div style="padding:14px; display:flex; align-items:center; gap:12px; border-bottom:1px solid var(--line,#F1EBDE);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.8"><path d="M11 5 6 9H2v6h4l5 4z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"></path></svg><span style="flex:1; font-size:13px; color:var(--txt,#10221B);">' + t.soundLabel + '</span><button data-act="toggleSound" style="width:42px;height:25px;border-radius:999px;background:' + v.soundTrack + ';border:none;cursor:pointer;display:flex;align-items:center;justify-content:' + v.soundAlign + ';padding:3px;box-sizing:border-box;"><span style="width:19px;height:19px;border-radius:50%;background:var(--surf,#FFF);box-shadow:0 1px 3px rgba(0,0,0,.2);"></span></button></div>'
+    + '<div style="padding:14px; display:flex; align-items:center; gap:12px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.8"><path d="M12 2 15 9l7 .5-5.5 4.5L18 21l-6-4-6 4 1.5-7L2 9.5 9 9z"></path></svg><span style="flex:1; font-size:13px; color:var(--txt,#10221B);">' + t.priorityLabel + '</span><button data-act="togglePriority" style="width:42px;height:25px;border-radius:999px;background:' + v.priorityTrack + ';border:none;cursor:pointer;display:flex;align-items:center;justify-content:' + v.priorityAlign + ';padding:3px;box-sizing:border-box;"><span style="width:19px;height:19px;border-radius:50%;background:var(--surf,#FFF);box-shadow:0 1px 3px rgba(0,0,0,.2);"></span></button></div>'
+    + '<button data-act="openDomains" style="width:100%;text-align:start;background:none;padding:14px; display:flex; align-items:center; gap:12px; cursor:pointer; border:none; border-top:1px solid var(--line,#F1EBDE);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg><span style="flex:1; font-size:13px; color:var(--txt,#10221B);">' + t.manageDomains + '</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B0A491" stroke-width="2" style="transform:scaleX(' + v.arrowFlip + ');"><path d="m9 18 6-6-6-6"></path></svg></button>'
+    + '</div>'
+    + '<div style="background:var(--surf,#FFF); border-radius:16px; overflow:hidden;">'
+    + '<button data-act="actPrivacy" style="width:100%;text-align:start;background:none;padding:14px; display:flex; align-items:center; gap:12px; border:none; cursor:pointer; border-bottom:1px solid var(--line,#F1EBDE);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.8"><rect x="3" y="11" width="18" height="10" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg><span style="flex:1; font-size:13px; color:var(--txt,#10221B);">' + t.privacy + '</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B0A491" stroke-width="2" style="transform:scaleX(' + v.arrowFlip + ');"><path d="m9 18 6-6-6-6"></path></svg></button>'
+    + '<div style="padding:14px; display:flex; align-items:center; gap:12px; border-bottom:1px solid var(--line,#F1EBDE);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.8"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4 12H2M22 12h-2"></path></svg><span style="flex:1; font-size:13px; color:var(--txt,#10221B);">' + t.appearance + '</span><div style="display:flex; gap:4px; background:var(--line,#F1EBDE); padding:3px; border-radius:10px;"><button data-act="setLight" style="font-size:11px;font-weight:600;padding:5px 12px;border-radius:8px;border:none;cursor:pointer;background:' + v.lightBg + ';color:' + v.lightColor + ';">' + t.light + '</button><button data-act="setDark" style="font-size:11px;font-weight:600;padding:5px 12px;border-radius:8px;border:none;cursor:pointer;background:' + v.darkBg + ';color:' + v.darkColor + ';">' + t.darkV + '</button></div></div>'
+    + '<button data-act="toggleLang" style="width:100%;text-align:start;background:none;border:none;cursor:pointer;padding:14px; display:flex; align-items:center; gap:12px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.8"><circle cx="12" cy="12" r="10"></circle><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20"></path></svg><span style="flex:1; font-size:13px; color:var(--txt,#10221B);">' + t.language + '</span><span style="font-size:12px; color:var(--pr,#0F7A5A); font-weight:600;">' + t.langVal + '</span></button>'
+    + '</div></div></div>';
+}
+
+function screenList(v) {
+  var t = v.t;
+  var content;
+  if (v.listEmpty) {
+    content = '<div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 40px; gap:16px; text-align:center;">'
+      + '<div style="width:82px;height:82px;border-radius:26px;background:#EAF6EF;display:flex;align-items:center;justify-content:center;"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.6"><path d="M20 6 9 17l-5-5"></path></svg></div>'
+      + '<div style="display:flex; flex-direction:column; gap:6px;"><span style="font-family:\'Readex Pro\'; font-weight:700; font-size:18px; color:var(--head,#073A2A);">' + t.allGood + '</span><span style="font-size:13px; color:#6A7A70; line-height:1.7;">' + t.allGoodSub + '</span></div>'
+      + '<button data-act="setListAll" style="background:var(--surf,#FFF);color:var(--pr,#0F7A5A);border:2px solid var(--pr,#0F7A5A);padding:11px 22px;border-radius:13px;font-family:\'Readex Pro\';font-weight:600;font-size:14px;cursor:pointer;">' + t.showAll + '</button>'
+      + '</div>';
+  } else {
+    var items = v.listNotifs.map(function (n) {
+      var dot = n.unread ? '<span style="width:8px;height:8px;border-radius:50%;background:var(--pr,#0F7A5A);"></span>' : '';
+      return '<button data-act="openNotif" data-id="' + n.id + '" style="text-align:start; border:none; background:var(--surf,#FFF); border-radius:16px; padding:13px; display:flex; align-items:center; gap:11px; cursor:pointer; border-inline-start:3px solid ' + n.rail + '; animation:lm-slide .2s ease;">'
+        + '<div style="width:40px;height:40px;border-radius:12px;background:' + n.avBg + ';color:' + n.avColor + ';display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">' + n.initial + '</div>'
+        + '<div style="flex:1; display:flex; flex-direction:column; gap:2px; min-width:0;"><span style="font-size:13px;font-weight:600;color:var(--txt,#10221B);">' + n.sub + '</span><span style="font-size:12px;color:var(--sub,#4A5B52);">' + n.title + '</span></div>'
+        + '<div style="display:flex; flex-direction:column; align-items:flex-start; gap:5px; flex-shrink:0;"><span style="font-size:10px;color:var(--sub,#8A968F);">' + n.time2 + '</span>' + dot + '</div>'
+        + '</button>';
+    }).join('');
+    content = '<div class="lm-scroll" style="flex:1; overflow-y:auto; padding:0 18px 16px; display:flex; flex-direction:column; gap:10px;"><span style="font-family:\'Readex Pro\'; font-weight:600; font-size:13px; color:var(--sub,#8A968F);">' + t.today + '</span>' + items + '</div>';
+  }
+  return '<div style="position:absolute; inset:0; display:flex; flex-direction:column; animation:lm-fade .3s ease;">'
+    + '<div style="padding:0 18px 12px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">'
+    + '<span style="font-family:\'Readex Pro\'; font-weight:700; font-size:18px; color:var(--head,#073A2A);">' + t.notifications + '</span>'
+    + '<div style="display:flex; gap:8px;">'
+    + '<button data-act="goCalendar" title="' + esc(t.jumpDate) + '" style="width:36px;height:36px;border-radius:11px;background:var(--surf,#FFF);border:1px solid var(--line,#E4DCCB);display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.9"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M3 10h18M8 2v4M16 2v4"></path></svg></button>'
+    + '<button data-act="openDomains" title="' + esc(t.filter) + '" style="width:36px;height:36px;border-radius:11px;background:var(--surf,#FFF);border:1px solid var(--line,#E4DCCB);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.9"><path d="M3 4h18l-7 8v6l-4 2v-8z"></path></svg><span style="position:absolute;top:-4px;inset-inline-start:-4px;background:var(--ac,#FFB020);color:var(--txt,#10221B);font-size:9px;font-weight:700;min-width:15px;height:15px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 3px;">' + v.activeCount + '</span></button>'
+    + '</div></div>'
+    + '<div style="padding:0 18px 12px; display:flex; gap:8px; flex-shrink:0;">'
+    + '<button data-act="setListAll" style="border:1px solid ' + v.listAllBorder + ';background:' + v.listAllBg + ';color:' + v.listAllColor + ';font-size:12px;font-weight:600;padding:8px 15px;border-radius:12px;cursor:pointer;font-family:\'Readex Pro\';">' + t.all + '</button>'
+    + '<button data-act="setListUnread" style="border:1px solid ' + v.listUnreadBorder + ';background:' + v.listUnreadBg + ';color:' + v.listUnreadColor + ';font-size:12px;font-weight:600;padding:8px 15px;border-radius:12px;cursor:pointer;font-family:\'Readex Pro\';">' + t.unread + '</button>'
+    + '<button data-act="openDomains" style="background:var(--dk,#073A2A);color:#FFF;font-size:12px;font-weight:600;padding:8px 13px;border-radius:12px;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;">' + v.activeDomainLabel + '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#FFF" stroke-width="2.6" opacity=".7"><path d="m6 9 6 6 6-6"></path></svg></button>'
+    + '</div>'
+    + '<div style="padding:0 18px 12px; flex-shrink:0;"><div style="background:linear-gradient(135deg,var(--pr,#0F7A5A),var(--pr2,#0B5E45)); border-radius:18px; padding:15px 16px; display:flex; align-items:center; gap:13px;"><div style="width:44px;height:44px;border-radius:13px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="font-family:\'Readex Pro\';font-weight:700;font-size:20px;color:var(--ac,#FFB020);">' + v.activeCount + '</span></div><div style="flex:1; display:flex; flex-direction:column; gap:3px;"><span style="font-family:\'Readex Pro\'; font-weight:600; font-size:14px; color:#FFF;">' + t.greeting + '</span><span style="font-size:12px; color:#FFFFFF; opacity:.82;">' + t.greetingSub + '</span></div><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ac,#FFB020)" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9z"></path></svg></div></div>'
+    + content
+    + '</div>';
+}
+
+function screenCalendar(v) {
+  var t = v.t;
+  var wd = v.weekdays.map(function (w) { return '<span style="font-size:10px;color:var(--sub,#8A968F);">' + w + '</span>'; }).join('');
+  var days = v.calDays.map(function (d) {
+    var dot = d.dot ? '<span style="position:absolute;bottom:2px;inset-inline-start:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--ac,#FFB020);"></span>' : '';
+    return '<span style="font-size:12px;padding:6px 0;position:relative;background:' + d.bg + ';color:' + d.color + ';border-radius:9px;font-weight:' + d.weight + ';">' + d.num + dot + '</span>';
+  }).join('');
+  return '<div style="position:absolute; inset:0; display:flex; flex-direction:column; animation:lm-fade .3s ease;">'
+    + '<div style="padding:0 18px 12px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0;"><button data-act="goList" style="width:34px;height:34px;border-radius:11px;background:var(--surf,#FFF);border:1px solid var(--line,#E4DCCB);display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--txt,#10221B)" stroke-width="2" style="transform:scaleX(' + v.arrowFlip + ');"><path d="m9 18 6-6-6-6"></path></svg></button><span style="font-family:\'Readex Pro\'; font-weight:700; font-size:16px; color:var(--head,#073A2A);">' + t.jumpTitle + '</span><div style="width:34px;"></div></div>'
+    + '<div class="lm-scroll" style="flex:1; overflow-y:auto; padding:0 18px 16px; display:flex; flex-direction:column; gap:14px;">'
+    + '<div style="background:var(--surf,#FFF); border-radius:18px; padding:16px; display:flex; flex-direction:column; gap:12px;">'
+    + '<div style="display:flex; align-items:center; justify-content:space-between;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="2" style="transform:scaleX(' + v.arrowFlip + ');"><path d="m15 18-6-6 6-6"></path></svg><span style="font-family:\'Readex Pro\'; font-weight:600; font-size:15px; color:var(--head,#073A2A);">' + t.month + '</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="2" style="transform:scaleX(' + v.arrowFlip + ');"><path d="m9 18 6-6-6-6"></path></svg></div>'
+    + '<div style="display:grid; grid-template-columns:repeat(7,1fr); gap:6px; text-align:center;">' + wd + days + '</div>'
+    + '</div>'
+    + '<span style="font-size:13px; font-weight:600; color:var(--head,#073A2A);">' + t.quickJumps + '</span>'
+    + '<div style="display:flex; gap:8px; flex-wrap:wrap;">'
+    + '<button data-act="goList" style="background:var(--pr,#0F7A5A);color:#FFF;font-size:12px;font-weight:600;padding:8px 15px;border-radius:12px;border:none;cursor:pointer;font-family:\'IBM Plex Sans Arabic\';">' + t.todayJ + '</button>'
+    + '<button data-act="goList" style="background:var(--surf,#FFF);color:var(--sub,#4A5B52);font-size:12px;padding:8px 15px;border-radius:12px;border:1px solid var(--line,#E4DCCB);cursor:pointer;font-family:\'IBM Plex Sans Arabic\';">' + t.thisWeek + '</button>'
+    + '<button data-act="goList" style="background:var(--surf,#FFF);color:var(--sub,#4A5B52);font-size:12px;padding:8px 15px;border-radius:12px;border:1px solid var(--line,#E4DCCB);cursor:pointer;font-family:\'IBM Plex Sans Arabic\';">' + t.thisMonth + '</button>'
+    + '<button data-act="goList" style="background:var(--surf,#FFF);color:var(--sub,#4A5B52);font-size:12px;padding:8px 15px;border-radius:12px;border:1px solid var(--line,#E4DCCB);cursor:pointer;font-family:\'IBM Plex Sans Arabic\';">' + t.augustJ + '</button>'
+    + '</div></div>'
+    + '<div style="padding:12px 18px 16px; flex-shrink:0;"><button data-act="goList" style="width:100%;background:var(--pr,#0F7A5A); color:#FFF; border:none; height:48px; border-radius:15px; font-family:\'Readex Pro\'; font-weight:600; font-size:14px; cursor:pointer;">' + t.viewResults + '</button></div>'
+    + '</div>';
+}
+
+function sideMenu(v) {
+  var t = v.t;
+  var item = function (act, svg, label, color) {
+    return '<button data-act="' + act + '" style="text-align:start;background:none;border:none;cursor:pointer;padding:13px 16px;display:flex;align-items:center;gap:14px;">' + svg + '<span style="font-size:14px; color:' + (color || '#FFFFFF') + '; opacity:' + (color ? '1' : '.85') + '; font-weight:' + (color ? '600' : '400') + ';">' + label + '</span></button>';
+  };
+  return '<div data-act="closeMenu" style="position:absolute; inset:0; background:rgba(11,23,18,.4); z-index:55; animation:lm-fade .2s ease;"></div>'
+    + '<div style="position:absolute; top:0; bottom:0; inset-inline-end:0; width:270px; z-index:56; background:var(--dk,#073A2A); display:flex; flex-direction:column; animation:lm-slide .28s ease; box-shadow:0 0 46px -12px rgba(11,23,18,.5);">'
+    + '<div style="padding:52px 20px 18px; display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:9px;">' + logo(25) + '<span style="font-family:\'Readex Pro\'; font-weight:700; font-size:18px; color:#FFF;">' + t.appName + '</span></div><button data-act="closeMenu" style="background:none;border:none;cursor:pointer;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" opacity=".7"><path d="m6 6 12 12M18 6 6 18"></path></svg></button></div>'
+    + '<div style="padding:0 16px 16px;"><div style="background:rgba(255,255,255,.08); border-radius:16px; padding:14px; display:flex; align-items:center; gap:12px;"><div style="width:44px;height:44px;border-radius:50%;background:var(--ac,#FFB020);"></div><div style="display:flex; flex-direction:column; gap:2px;"><span style="font-size:15px;font-weight:600;color:#FFF;">' + t.userName + '</span><span style="font-size:12px;color:#FFFFFF;opacity:.7;">roqaya@email.com</span></div></div></div>'
+    + '<div style="flex:1; padding:0 10px; display:flex; flex-direction:column; gap:2px;">'
+    + item('goHome', '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" opacity=".85"><path d="M3 10 12 3l9 7v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>', t.home)
+    + item('goList', '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" opacity=".85"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path></svg>', t.allNotifs)
+    + item('goSearch', '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" opacity=".85"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>', t.search)
+    + item('goCalendar', '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" opacity=".85"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M3 10h18M8 2v4M16 2v4"></path></svg>', t.jumpDate)
+    + item('goSettings', '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" opacity=".85"><circle cx="12" cy="12" r="3"></circle><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 0 0-1.7-1l-.4-2.5h-4l-.4 2.5a7 7 0 0 0-1.7 1l-2.4-1-2 3.5 2 1.5a7 7 0 0 0 0 2l-2 1.5 2 3.5 2.4-1a7 7 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7 7 0 0 0 1.7-1l2.4 1 2-3.5-2-1.5a7 7 0 0 0 .1-1z"></path></svg>', t.settingsShort)
+    + item('toggleLang', '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ac,#FFB020)" stroke-width="1.8"><circle cx="12" cy="12" r="10"></circle><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20"></path></svg>', t.langSwitch, 'var(--ac,#FFB020)')
+    + '</div>'
+    + '<div style="padding:14px 26px 26px; border-top:1px solid rgba(255,255,255,.1); margin:0 10px;"><button data-act="goOnboarding" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:14px;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#FF6B78" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"></path></svg><span style="font-size:14px; color:#FF6B78; font-weight:600;">' + t.logout + '</span></button></div>'
+    + '</div>';
+}
+
+function domainSheet(v) {
+  var t = v.t;
+  var cells = v.domains.map(function (d) {
+    return '<button data-act="pickDomain" data-key="' + d.key + '" style="border:none; cursor:pointer; background:' + d.bg + '; border-radius:15px; padding:13px 6px; display:flex; flex-direction:column; align-items:center; gap:6px;">'
+      + '<span style="color:' + d.iconColor + ';display:flex;">' + d.icon + '</span>'
+      + '<span style="font-size:11px; color:' + d.labelColor + ';">' + d.label + '</span>'
+      + '<span style="font-size:10px; color:' + d.countColor + '; font-weight:600;">' + d.count + '</span></button>';
+  }).join('');
+  return '<div data-act="closeDomains" style="position:absolute; inset:0; background:rgba(11,23,18,.32); z-index:40; animation:lm-fade .2s ease;"></div>'
+    + '<div style="position:absolute; left:0; right:0; bottom:0; z-index:50; padding:0 12px 12px; animation:lm-sheet .28s cubic-bezier(.2,.8,.25,1);">'
+    + '<div style="background:var(--surf,#FFF); border-radius:24px 24px 20px 20px; box-shadow:0 -18px 46px -12px rgba(11,23,18,.35); padding:16px; display:flex; flex-direction:column; gap:14px;">'
+    + '<div style="width:38px; height:4px; background:#E1D8C8; border-radius:99px; align-self:center;"></div>'
+    + '<div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-family:\'Readex Pro\'; font-weight:600; font-size:15px; color:var(--head,#073A2A);">' + t.chooseDomain + '</span><span style="background:var(--line,#F1EBDE); color:var(--sub,#4A5B52); font-size:11px; padding:3px 10px; border-radius:999px;">' + t.domainsCount + '</span></div>'
+    + '<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:9px;">' + cells + '</div>'
+    + '<button data-act="closeDomains" style="background:var(--pr,#0F7A5A); color:#FFF; border:none; height:48px; border-radius:14px; font-family:\'Readex Pro\'; font-weight:600; font-size:15px; cursor:pointer;">' + t.applyDomain + '</button>'
+    + '</div></div>';
+}
+
+function bottomNav(v) {
+  var t = v.t;
+  return '<div style="height:62px; background:var(--surf,#FFF); border-top:1px solid var(--line,#EDE6D9); display:flex; align-items:center; justify-content:space-around; flex-shrink:0; z-index:10;">'
+    + '<button data-act="goHome" style="background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10px;font-family:\'Readex Pro\';color:' + v.navHomeColor + ';"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10 12 3l9 7v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg><span>' + t.home + '</span></button>'
+    + '<button data-act="goList" style="background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10px;font-family:\'Readex Pro\';color:' + v.navListColor + ';"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg><span>' + t.notifications + '</span></button>'
+    + '<button data-act="goSearch" style="background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10px;font-family:\'Readex Pro\';color:' + v.navSearchColor + ';"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg><span>' + t.search + '</span></button>'
+    + '<button data-act="goSettings" style="background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10px;font-family:\'Readex Pro\';color:' + v.navMoreColor + ';"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5" cy="12" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="19" cy="12" r="1.5"></circle></svg><span>' + t.more + '</span></button>'
+    + '</div>';
+}
+
+function paletteSwitcher(v) {
+  var t = v.t;
+  var chips = v.palettes.map(function (p) {
+    return '<button data-act="pickPalette" data-id="' + p.id + '" title="' + esc(p.name) + '" style="cursor:pointer; background:var(--surf,#FFF); border:2px solid ' + p.ring + '; border-radius:13px; padding:6px 7px 7px; display:flex; flex-direction:column; align-items:center; gap:5px; min-width:78px;">'
+      + '<span style="display:flex; border-radius:6px; overflow:hidden;">'
+      + '<span style="width:15px; height:20px; background:' + p.c0 + ';"></span>'
+      + '<span style="width:15px; height:20px; background:' + p.c1 + ';"></span>'
+      + '<span style="width:15px; height:20px; background:' + p.c2 + ';"></span>'
+      + '<span style="width:15px; height:20px; background:' + p.c3 + ';"></span>'
+      + '<span style="width:15px; height:20px; background:' + p.c4 + ';"></span></span>'
+      + '<span style="font-size:10px; font-weight:600; color:' + p.labelColor + ';">' + p.name + '</span></button>';
+  }).join('');
+  return '<div style="width:100%; max-width:760px; background:rgba(255,255,255,.6); border:1px solid #E4DCCB; border-radius:20px; padding:14px 16px; display:flex; flex-direction:column; gap:11px;">'
+    + '<div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-family:\'Readex Pro\'; font-weight:600; font-size:14px; color:' + v.cDk + ';">' + t.paletteTitle + '</span><span style="font-size:12px; color:' + v.cPr + '; font-weight:600;">' + v.activePaletteName + '</span></div>'
+    + '<div style="display:flex; flex-wrap:wrap; gap:9px;">' + chips + '</div>'
+    + '<span style="font-size:11px; color:#6A7A70;">' + t.paletteHint + '</span></div>';
+}
+
+/* Current visible screen inside the phone */
+function activeScreen(v) {
+  if (v.isOnboarding) return screenOnboarding(v);
+  if (v.isAuth) return screenAuth(v);
+  if (v.isPermission) return screenPermission(v);
+  if (v.isConnect) return screenConnect(v);
+  if (v.isLock) return screenLock(v);
+  if (v.isHome) return screenHome(v);
+  if (v.isSearch) return screenSearch(v);
+  if (v.isDetails) return screenDetails(v);
+  if (v.isThread) return screenThread(v);
+  if (v.isSettings) return screenSettings(v);
+  if (v.isList) return screenList(v);
+  if (v.isCalendar) return screenCalendar(v);
+  return '';
+}
+
+/* ------------------------------ Render ---------------------------- */
+function render() {
+  var v = computeVals();
+  document.documentElement.setAttribute('dir', v.dir);
+  document.documentElement.setAttribute('lang', v.lang === 'ar' ? 'ar' : 'en');
+
+  var overlays = '';
+  if (v.menuOpen) overlays += sideMenu(v);
+  if (v.domainsOpen) overlays += domainSheet(v);
+  if (v.toast) overlays += '<div style="position:absolute; bottom:78px; left:50%; transform:translateX(-50%); background:var(--dk,#073A2A); color:#FFF; font-family:\'Readex Pro\'; font-weight:600; font-size:13px; padding:11px 20px; border-radius:999px; z-index:70; box-shadow:0 12px 30px -10px rgba(11,23,18,.5); animation:lm-fade .2s ease; white-space:nowrap;">' + v.toast + '</div>';
+  var nav = v.showNav ? bottomNav(v) : '';
+
+  var html = ''
+    + '<div dir="' + v.dir + '" style="font-family:\'Readex Pro\',\'IBM Plex Sans Arabic\',system-ui,sans-serif; color:var(--txt,#10221B); min-height:100vh; background:radial-gradient(circle at 50% 0,#EEE8DC,#E1DACC); display:flex; flex-direction:column; align-items:center; gap:18px; padding:34px 20px;">'
+    + '<div style="display:flex; align-items:center; gap:10px;">'
+    + '<svg width="28" height="28" viewBox="0 0 96 96" fill="none"><rect width="96" height="96" rx="26" fill="' + v.cPr + '"></rect><rect x="20" y="26" width="56" height="11" rx="5.5" fill="#FFFFFF"></rect><rect x="34" y="43" width="42" height="11" rx="5.5" fill="' + v.cAc + '"></rect><rect x="52" y="60" width="24" height="11" rx="5.5" fill="' + v.cMint + '"></rect><circle cx="28" cy="65.5" r="8" fill="' + v.cInk + '"></circle></svg>'
+    + '<span style="font-family:\'Readex Pro\'; font-weight:700; font-size:19px; color:' + v.cDk + ';">' + v.t.previewTitle + '</span>'
+    + '</div>'
+    + paletteSwitcher(v)
+    + '<div style="width:340px; height:700px; background:#0B1712; border-radius:46px; padding:11px; box-shadow:0 40px 90px -30px rgba(11,23,18,.6); position:relative;">'
+    + '<div style="position:absolute; top:22px; left:50%; transform:translateX(-50%); width:110px; height:26px; background:#0B1712; border-radius:0 0 16px 16px; z-index:60;"></div>'
+    + '<div class="lm-scroll" style="' + v.themeVars + ' width:100%; height:100%; background:var(--bg,#F4EEE2); border-radius:36px; overflow:hidden; position:relative; display:flex; flex-direction:column;">'
+    + '<div style="height:44px; display:flex; align-items:center; justify-content:space-between; padding:0 26px; font-size:13px; font-weight:600; color:var(--txt,#10221B); flex-shrink:0; z-index:20;"><span>9:41</span><span style="letter-spacing:1px;">▪▪▪ ▪ ▮</span></div>'
+    + '<div style="flex:1; position:relative; overflow:hidden;">' + activeScreen(v) + '</div>'
+    + overlays
+    + nav
+    + '</div></div></div>';
+
+  document.getElementById('app').innerHTML = html;
+}
+
+/* --------------------------- Actions ------------------------------ */
+var ACTIONS = {
+  toggleLang: function () { setState({ lang: App.state.lang === 'ar' ? 'en' : 'ar' }); },
+  pickPalette: function (el) { setState({ palette: el.getAttribute('data-id') }); },
+  goSignup: function () { setState({ screen: 'auth', authMode: 'signup', domainsOpen: false, menuOpen: false }); },
+  goLogin: function () { setState({ screen: 'auth', authMode: 'login', domainsOpen: false, menuOpen: false }); },
+  goOnboarding: function () { go('onboarding'); },
+  setAuthLogin: function () { setState({ authMode: 'login' }); },
+  setAuthSignup: function () { setState({ authMode: 'signup' }); },
+  submitAuth: function () { go('permission'); },
+  allowPerm: function () { go('connect'); },
+  laterPerm: function () { go('connect'); },
+  toggleSource: function (el) {
+    var k = el.getAttribute('data-key');
+    var c = Object.assign({}, App.state.connected);
+    c[k] = !c[k];
+    setState({ connected: c });
+  },
+  connectContinue: function () { go('lock'); },
+  openApp: function () { go('home'); },
+  openDetails: function () { setState({ screen: 'details', domainsOpen: false, menuOpen: false }); },
+  openNotif: function () { setState({ screen: 'details', domainsOpen: false, menuOpen: false }); },
+  goHome: function () { go('home'); },
+  goSearch: function () { go('search'); },
+  goSettings: function () { go('settings'); },
+  goList: function () { go('list'); },
+  goCalendar: function () { go('calendar'); },
+  goThread: function () { setState({ screen: 'thread', domainsOpen: false, menuOpen: false, tab: 'thread' }); },
+  openMenu: function () { setState({ menuOpen: true }); },
+  closeMenu: function () { setState({ menuOpen: false }); },
+  openDomains: function () { setState({ domainsOpen: true }); },
+  closeDomains: function () { setState({ domainsOpen: false }); },
+  setTabThread: function () { setState({ tab: 'thread' }); },
+  setTabHistory: function () { setState({ tab: 'history' }); },
+  togglePush: function () { setState({ push: !App.state.push }); },
+  toggleSound: function () { setState({ sound: !App.state.sound }); },
+  togglePriority: function () { setState({ priorityOnly: !App.state.priorityOnly }); },
+  setLight: function () { setState({ darkMode: false }); },
+  setDark: function () { setState({ darkMode: true }); },
+  setListAll: function () { setState({ listFilter: 'all' }); },
+  setListUnread: function () { setState({ listFilter: 'unread' }); },
+  pickDomain: function (el) { setState({ domain: el.getAttribute('data-key') }); },
+  actSave: function () { showToast(App.state.lang === 'ar' ? 'تم حفظ الفاتورة' : 'Invoice saved'); },
+  actPay: function () { showToast(App.state.lang === 'ar' ? 'جارٍ فتح صفحة الدفع' : 'Opening payment'); },
+  actTransfer: function () { showToast(App.state.lang === 'ar' ? 'جارٍ تجهيز التحويل' : 'Preparing transfer'); },
+  actSmart: function () { showToast(App.state.lang === 'ar' ? 'البحث الذكي مُفعّل' : 'Smart search on'); },
+  actSaveSearch: function () { showToast(App.state.lang === 'ar' ? 'تم حفظ البحث' : 'Search saved'); },
+  actForgot: function () { showToast(App.state.lang === 'ar' ? 'أرسلنا رابط استعادة كلمة المرور' : 'Reset link sent'); },
+  actSocial: function () { showToast(App.state.lang === 'ar' ? 'جارٍ المتابعة…' : 'Continuing…'); },
+  actPersonal: function () { showToast(App.state.lang === 'ar' ? 'البيانات الشخصية' : 'Personal information'); },
+  actPrivacy: function () { showToast(App.state.lang === 'ar' ? 'الخصوصية والأمان' : 'Privacy & Security'); }
+};
+
+/* Event delegation — one listener, every button works */
+document.getElementById('app').addEventListener('click', function (e) {
+  var el = e.target.closest('[data-act]');
+  if (!el) return;
+  var act = el.getAttribute('data-act');
+  if (ACTIONS[act]) {
+    e.preventDefault();
+    ACTIONS[act](el);
+  }
+});
+
+/* Keep input values from being wiped on re-render: stop propagation
+   so typing does not trigger delegated actions, and let inputs work. */
+document.getElementById('app').addEventListener('input', function (e) {
+  e.stopPropagation();
+});
+
+render();
+</script>
+</body>
+</html>
