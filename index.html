@@ -38,6 +38,7 @@ var App = {
     authMode: 'login',
     connected: { banks: true, telecom: true, shop: true, delivery: false, health: true, travel: false },
     searchQuery: '', searchScope: 'all', recentSearches: ['STC', '2,450'],
+    phone: '', showTutorial: false, tutorialStep: 0,
     toast: ''
   },
   _tt: null
@@ -161,6 +162,15 @@ var T = {
     permRow1:'قراءة الإشعارات الواردة', permRow1s:'من التطبيقات التي تختارها', permRow2:'تلخيص وتصنيف تلقائي', permRow2s:'المهم يظهر أولاً بلمحة', permRow3:'خصوصية كاملة', permRow3s:'المعالجة محلية ولا تُشارك بياناتك',
     permAllow:'السماح بالوصول', permLater:'ليس الآن',
     connTitle:'اربط مصادرك', connSub:'اختر الجهات التي تريد أن تجمع لمحة إشعاراتها في مكان واحد.', connContinue:'متابعة', connSkip:'تخطّي الآن',
+    phoneTitle:'أدخل رقم جوالك', phoneSub:'سنرسل لك رمز تحقق لتأكيد رقمك.', phoneField:'5X XXX XXXX', phoneCont:'إرسال الرمز', phoneNote:'قد تُطبّق رسوم الرسائل حسب مشغّلك.',
+    otpTitle:'أدخل رمز التحقق', otpSub:'أرسلنا رمزًا من ٤ أرقام إلى', otpVerifyW:'تحقّق ودخول', otpResendW:'لم يصلك الرمز؟ إعادة الإرسال', otpDemo:'للتجربة: اكتب أي ٤ أرقام.', otpChange:'تغيير الرقم',
+    tourTitle:'جولة سريعة في لمحة', tourSkip:'تخطّي', tourNext:'التالي', tourBack:'السابق', tourDone:'ابدأ الاستخدام', tourStepW:'خطوة', tourOfW:'من', tourReopen:'الجولة التعريفية',
+    tour1t:'لمحة اليوم', tour1b:'ملخّص ذكي يجمع إشعاراتك من كل مصادرك: الجديدة، المهمة، وغير المقروءة في نظرة واحدة.',
+    tour2t:'يحتاج انتباهك', tour2b:'نضع الإشعارات العاجلة والمهمة غير المقروءة في الأعلى، حتى لا يفوتك ما يهم.',
+    tour3t:'مجموعاتك الذكية', tour3b:'إشعاراتك مرتّبة تلقائيًا: أموالك، اتصالاتك، مشترياتك، طلباتك، مواعيدك، رحلاتك. اضغط أي مجموعة لفتحها.',
+    tour4t:'البحث الذكي', tour4b:'اكتب بلغتك الطبيعية — جهة، مبلغ، تاريخ أو كلمة — وصفِّ النتائج بالمرسِل أو المبلغ أو غير المقروء للوصول لأي رسالة قديمة بسرعة.',
+    tour5t:'تفاصيل الإشعار', tour5b:'افتح أي إشعار لرؤية الرسالة الأصلية والإشعارات المرتبطة من نفس المرسِل، مع إجراءات: تمييز كمقروء، تثبيت، كتم، ومشاركة.',
+    tour6t:'التنبيهات والخصوصية', tour6b:'تحكّم بالتنبيهات الذكية وأوقات عدم الإزعاج، وبياناتك تبقى لك — المعالجة محلية على جهازك.',
     lockDate:'الاثنين ٩ سبتمبر', pushApp:'لمحة', pushNow:'الآن', pushTitle:'٤ إشعارات جديدة تنتظرك', pushBody:'إيداع SAR 2,450 من البنك الأهلي، وتحديث بيانات عاجل.', pushHint:'هكذا ستصلك تنبيهات لمحة على شاشة القفل', pushOpen:'افتح لمحة',
     weekdays:['أحد','إثن','ثلا','أرب','خمي','جمع','سبت']
   },
@@ -198,6 +208,15 @@ var T = {
     permRow1:'Read incoming alerts', permRow1s:'from the apps you choose', permRow2:'Auto summary & sorting', permRow2s:'what matters shows first, at a glance', permRow3:'Full privacy', permRow3s:'processed locally, never shared',
     permAllow:'Allow access', permLater:'Not now',
     connTitle:'Connect your sources', connSub:'Choose the senders whose alerts Lamha should gather in one place.', connContinue:'Continue', connSkip:'Skip for now',
+    phoneTitle:'Enter your phone number', phoneSub:'We\'ll send you a code to verify your number.', phoneField:'5X XXX XXXX', phoneCont:'Send code', phoneNote:'Message rates may apply depending on your carrier.',
+    otpTitle:'Enter the verification code', otpSub:'We sent a 4-digit code to', otpVerifyW:'Verify & continue', otpResendW:'Didn\'t get it? Resend code', otpDemo:'Demo: type any 4 digits.', otpChange:'Change number',
+    tourTitle:'A quick tour of Lamha', tourSkip:'Skip', tourNext:'Next', tourBack:'Back', tourDone:'Start using', tourStepW:'Step', tourOfW:'of', tourReopen:'App tour',
+    tour1t:'Your Lamha today', tour1b:'A smart summary that gathers alerts from all your sources: new, important, and unread — at a glance.',
+    tour2t:'Needs your attention', tour2b:'Urgent and important unread alerts are pinned to the top so you never miss what matters.',
+    tour3t:'Your smart groups', tour3b:'Alerts auto-organized: money, telecom, shopping, orders, appointments, trips. Tap any group to open it.',
+    tour4t:'Smart search', tour4b:'Type naturally — a sender, amount, date or word — and narrow by sender, amount or unread to reach any old message fast.',
+    tour5t:'Notification details', tour5b:'Open any alert to see the original message and related notifications from the same sender, with actions: mark read, pin, mute, share.',
+    tour6t:'Alerts & privacy', tour6b:'Control smart alerts and quiet hours. Your data stays yours — processed locally on your device.',
     lockDate:'Monday, 9 September', pushApp:'Lamha', pushNow:'now', pushTitle:'4 new alerts waiting for you', pushBody:'SAR 2,450 deposit from Al Ahli Bank, and an urgent update.', pushHint:'This is how Lamha alerts reach your lock screen', pushOpen:'Open Lamha',
     weekdays:['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
   }
@@ -346,6 +365,8 @@ function computeVals() {
     isDetails: s === 'details', isThread: s === 'thread', isSettings: s === 'settings',
     isList: s === 'list', isCalendar: s === 'calendar', isAuth: s === 'auth',
     isPermission: s === 'permission', isConnect: s === 'connect', isLock: s === 'lock',
+    isPhone: s === 'phone', isOtp: s === 'otp',
+    phone: st.phone, showTutorial: st.showTutorial, tutorialStep: st.tutorialStep,
     showNav: ['home', 'settings', 'thread', 'list', 'search'].indexOf(s) !== -1,
     authIsLogin: st.authMode === 'login', authIsSignup: st.authMode === 'signup',
     authCta: st.authMode === 'login' ? t.authCtaLogin : t.authCtaSignup,
@@ -520,6 +541,75 @@ function screenConnect(v) {
     + '</div></div>';
 }
 
+function screenPhone(v) {
+  var t = v.t, ltr = v.lang !== 'ar';
+  return '<div style="position:absolute; inset:0; background:linear-gradient(180deg,var(--bg,#F4EEE2) 0%,#EAF6EF 100%); display:flex; flex-direction:column; animation:lm-fade .3s ease;">'
+    + '<div style="padding:2px 20px 8px; display:flex; align-items:center; flex-shrink:0;"><button data-act="goAuth" style="width:34px;height:34px;border-radius:11px;background:var(--surf,#FFF);border:1px solid var(--line,#E4DCCB);display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--txt,#10221B)" stroke-width="2" style="transform:scaleX(' + v.arrowFlip + ');"><path d="m9 18 6-6-6-6"></path></svg></button></div>'
+    + '<div style="flex:1; display:flex; flex-direction:column; padding:0 30px; gap:20px;">'
+    + '<div style="display:flex; flex-direction:column; align-items:center; gap:14px; margin-top:14px;">'
+    + '<div style="width:74px;height:74px;border-radius:22px;background:var(--surf,#FFF);box-shadow:0 14px 32px -14px rgba(16,34,27,.28);display:flex;align-items:center;justify-content:center;"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.7"><rect x="6" y="2" width="12" height="20" rx="3"></rect><path d="M11 18h2"></path></svg></div>'
+    + '<div style="font-family:\'Readex Pro\'; font-weight:700; font-size:23px; color:var(--head,#073A2A); text-align:center;">' + t.phoneTitle + '</div>'
+    + '<div style="font-size:14px; color:var(--sub,#4A5B52); text-align:center; line-height:1.8;">' + t.phoneSub + '</div></div>'
+    + '<div style="background:var(--surf,#FFF); border:1px solid var(--line,#E4DCCB); border-radius:14px; height:56px; display:flex; align-items:center; padding:0 14px; gap:10px; direction:ltr;">'
+    + '<span style="display:flex; align-items:center; gap:6px; font-family:\'Readex Pro\'; font-weight:600; font-size:15px; color:var(--txt,#10221B); border-inline-end:1px solid var(--line,#E4DCCB); padding-inline-end:10px;">🇸🇦 +966</span>'
+    + '<input id="lm-phone" type="tel" inputmode="numeric" value="' + esc(v.phone) + '" placeholder="' + esc(t.phoneField) + '" style="flex:1; border:none; outline:none; background:transparent; font-family:\'Readex Pro\'; font-size:16px; letter-spacing:1px; color:var(--txt,#10221B); text-align:left;"></div>'
+    + '<div style="font-size:12px; color:var(--sub,#8A968F); text-align:center; line-height:1.7;">' + t.phoneNote + '</div>'
+    + '</div>'
+    + '<div style="padding:0 30px 26px; flex-shrink:0;"><button data-act="phoneContinue" style="width:100%; background:var(--pr,#0F7A5A); color:#FFF; border:none; height:52px; border-radius:15px; font-family:\'Readex Pro\'; font-weight:600; font-size:16px; cursor:pointer;">' + t.phoneCont + '</button></div>'
+    + '</div>';
+}
+
+function screenOtp(v) {
+  var t = v.t;
+  var boxes = '';
+  for (var i = 0; i < 4; i++) {
+    boxes += '<input data-otp="' + i + '" id="lm-otp' + i + '" type="tel" inputmode="numeric" maxlength="1" style="width:58px;height:64px;border:1.5px solid var(--line,#E4DCCB);border-radius:16px;background:var(--surf,#FFF);text-align:center;font-family:\'Readex Pro\';font-weight:700;font-size:26px;color:var(--head,#073A2A);outline:none;">';
+  }
+  var num = v.phone ? ('+966 ' + v.phone) : '+966 5X XXX XXXX';
+  return '<div style="position:absolute; inset:0; background:linear-gradient(180deg,var(--bg,#F4EEE2) 0%,#EAF6EF 100%); display:flex; flex-direction:column; animation:lm-fade .3s ease;">'
+    + '<div style="padding:2px 20px 8px; display:flex; align-items:center; flex-shrink:0;"><button data-act="goPhone" style="width:34px;height:34px;border-radius:11px;background:var(--surf,#FFF);border:1px solid var(--line,#E4DCCB);display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--txt,#10221B)" stroke-width="2" style="transform:scaleX(' + v.arrowFlip + ');"><path d="m9 18 6-6-6-6"></path></svg></button></div>'
+    + '<div style="flex:1; display:flex; flex-direction:column; padding:0 26px; gap:18px;">'
+    + '<div style="display:flex; flex-direction:column; align-items:center; gap:12px; margin-top:14px;">'
+    + '<div style="width:74px;height:74px;border-radius:22px;background:var(--surf,#FFF);box-shadow:0 14px 32px -14px rgba(16,34,27,.28);display:flex;align-items:center;justify-content:center;"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m3 7 9 6 9-6"></path><path d="m16 16 2 2 4-4"></path></svg></div>'
+    + '<div style="font-family:\'Readex Pro\'; font-weight:700; font-size:22px; color:var(--head,#073A2A); text-align:center;">' + t.otpTitle + '</div>'
+    + '<div style="font-size:13px; color:var(--sub,#4A5B52); text-align:center; line-height:1.8;">' + t.otpSub + '<br><span style="direction:ltr; display:inline-block; font-weight:600; color:var(--txt,#10221B);">' + num + '</span> · <button data-act="goPhone" style="background:none;border:none;cursor:pointer;color:var(--pr,#0F7A5A);font-family:\'IBM Plex Sans Arabic\';font-size:13px;font-weight:600;padding:0;">' + t.otpChange + '</button></div></div>'
+    + '<div style="display:flex; gap:12px; justify-content:center; direction:ltr;">' + boxes + '</div>'
+    + '<div style="text-align:center; font-size:12px; color:var(--sub,#8A968F);">' + t.otpDemo + '</div>'
+    + '<button data-act="otpResend" style="align-self:center; background:none; border:none; cursor:pointer; font-family:\'Readex Pro\'; font-weight:600; font-size:13px; color:var(--pr,#0F7A5A);">' + t.otpResendW + '</button>'
+    + '</div>'
+    + '<div style="padding:0 30px 26px; flex-shrink:0;"><button data-act="otpVerify" style="width:100%; background:var(--pr,#0F7A5A); color:#FFF; border:none; height:52px; border-radius:15px; font-family:\'Readex Pro\'; font-weight:600; font-size:16px; cursor:pointer;">' + t.otpVerifyW + '</button></div>'
+    + '</div>';
+}
+
+var TUT = [
+  { icon:'<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FFF" stroke-width="1.7"><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"></path><circle cx="12" cy="12" r="4"></circle></svg>', tk:'tour1t', bk:'tour1b' },
+  { icon:'<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FFF" stroke-width="1.7"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>', tk:'tour2t', bk:'tour2b' },
+  { icon:'<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FFF" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>', tk:'tour3t', bk:'tour3b' },
+  { icon:'<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FFF" stroke-width="1.7"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>', tk:'tour4t', bk:'tour4b' },
+  { icon:'<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FFF" stroke-width="1.7"><path d="M4 4h16v12H5.2L4 18z"></path></svg>', tk:'tour5t', bk:'tour5b' },
+  { icon:'<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FFF" stroke-width="1.7"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>', tk:'tour6t', bk:'tour6b' }
+];
+
+function tutorialOverlay(v) {
+  var t = v.t, step = v.tutorialStep, s = TUT[step], last = step === TUT.length - 1;
+  var dots = '';
+  for (var i = 0; i < TUT.length; i++) {
+    dots += '<span style="width:' + (i === step ? '22px' : '7px') + ';height:7px;border-radius:4px;background:' + (i === step ? 'var(--pr,#0F7A5A)' : '#CBBFA9') + ';transition:all .2s;"></span>';
+  }
+  return '<div style="position:absolute; inset:0; z-index:80; background:rgba(7,26,20,.55); display:flex; flex-direction:column; justify-content:flex-end; animation:lm-fade .2s ease;">'
+    + '<div style="background:var(--surf,#FFF); border-radius:26px 26px 20px 20px; padding:22px; display:flex; flex-direction:column; gap:16px; animation:lm-sheet .3s cubic-bezier(.2,.8,.25,1);">'
+    + '<div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:11px; font-weight:600; color:var(--sub,#8A968F);">' + t.tourStepW + ' ' + toArabicNum(step + 1) + ' ' + t.tourOfW + ' ' + toArabicNum(TUT.length) + '</span><button data-act="tutSkip" style="background:none;border:none;cursor:pointer;font-family:\'Readex Pro\';font-weight:600;font-size:12px;color:var(--sub,#8A968F);">' + t.tourSkip + '</button></div>'
+    + '<div style="display:flex; flex-direction:column; align-items:center; gap:14px; text-align:center; padding:4px 6px 2px;">'
+    + '<div style="width:72px;height:72px;border-radius:22px;background:linear-gradient(135deg,var(--pr,#0F7A5A),var(--pr2,#0B5E45));display:flex;align-items:center;justify-content:center;box-shadow:0 12px 26px -12px var(--pr,#0F7A5A);">' + s.icon + '</div>'
+    + '<div style="font-family:\'Readex Pro\'; font-weight:700; font-size:20px; color:var(--head,#073A2A);">' + t[s.tk] + '</div>'
+    + '<div style="font-size:14px; color:var(--sub,#4A5B52); line-height:1.9;">' + t[s.bk] + '</div></div>'
+    + '<div style="display:flex; gap:6px; justify-content:center;">' + dots + '</div>'
+    + '<div style="display:flex; gap:10px;">'
+    + (step > 0 ? '<button data-act="tutBack" style="flex:0 0 auto; padding:0 20px; background:var(--line,#EAE3D6); color:var(--txt,#10221B); border:none; height:50px; border-radius:15px; font-family:\'Readex Pro\'; font-weight:600; font-size:15px; cursor:pointer;">' + t.tourBack + '</button>' : '')
+    + '<button data-act="' + (last ? 'tutDone' : 'tutNext') + '" style="flex:1; background:var(--pr,#0F7A5A); color:#FFF; border:none; height:50px; border-radius:15px; font-family:\'Readex Pro\'; font-weight:600; font-size:15px; cursor:pointer;">' + (last ? t.tourDone : t.tourNext) + '</button>'
+    + '</div></div></div>';
+}
+
 function screenLock(v) {
   var t = v.t;
   return '<div style="position:absolute; inset:0; background:linear-gradient(165deg,var(--dk,#073A2A) 0%,#0B1F17 100%); display:flex; flex-direction:column; align-items:center; animation:lm-fade .3s ease;">'
@@ -584,6 +674,7 @@ function screenHome(v) {
     + '<div style="display:flex; align-items:center; gap:8px;">' + logo(25) + '<span style="font-family:\'Readex Pro\'; font-weight:700; font-size:18px; color:var(--head,#073A2A);">' + t.appName + '</span></div>'
     + '<div style="display:flex; align-items:center; gap:8px;">'
     + '<button data-act="toggleLang" style="background:var(--surf,#FFF);border:1px solid var(--line,#E4DCCB);border-radius:999px;padding:6px 10px;font-family:\'Readex Pro\';font-weight:600;font-size:11px;color:var(--pr,#0F7A5A);cursor:pointer;">' + t.langSwitch + '</button>'
+    + '<button data-act="openTutorial" title="' + esc(t.tourReopen) + '" style="width:36px;height:36px;border-radius:12px;background:var(--surf,#FFF);border:1px solid var(--line,#E4DCCB);display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.9"><circle cx="12" cy="12" r="10"></circle><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4"></path><path d="M12 17h.01"></path></svg></button>'
     + '<button data-act="openMenu" style="width:31px;height:31px;border-radius:50%;background:var(--ac,#FFB020);border:none;cursor:pointer;"></button>'
     + '</div></div>'
     // Smart search + separate filter button
@@ -892,6 +983,7 @@ function sideMenu(v) {
     + item('goList', '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" opacity=".85"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path></svg>', t.allNotifs)
     + item('goSearch', '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" opacity=".85"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>', t.search)
     + item('goCalendar', '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" opacity=".85"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M3 10h18M8 2v4M16 2v4"></path></svg>', t.jumpDate)
+    + item('openTutorial', '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" opacity=".85"><circle cx="12" cy="12" r="10"></circle><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4"></path><path d="M12 17h.01"></path></svg>', t.tourReopen)
     + item('goSettings', '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" opacity=".85"><circle cx="12" cy="12" r="3"></circle><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 0 0-1.7-1l-.4-2.5h-4l-.4 2.5a7 7 0 0 0-1.7 1l-2.4-1-2 3.5 2 1.5a7 7 0 0 0 0 2l-2 1.5 2 3.5 2.4-1a7 7 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7 7 0 0 0 1.7-1l2.4 1 2-3.5-2-1.5a7 7 0 0 0 .1-1z"></path></svg>', t.settingsShort)
     + item('toggleLang', '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ac,#FFB020)" stroke-width="1.8"><circle cx="12" cy="12" r="10"></circle><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20"></path></svg>', t.langSwitch, 'var(--ac,#FFB020)')
     + '</div>'
@@ -949,6 +1041,8 @@ function paletteSwitcher(v) {
 function activeScreen(v) {
   if (v.isOnboarding) return screenOnboarding(v);
   if (v.isAuth) return screenAuth(v);
+  if (v.isPhone) return screenPhone(v);
+  if (v.isOtp) return screenOtp(v);
   if (v.isPermission) return screenPermission(v);
   if (v.isConnect) return screenConnect(v);
   if (v.isLock) return screenLock(v);
@@ -971,6 +1065,7 @@ function render() {
   var overlays = '';
   if (v.menuOpen) overlays += sideMenu(v);
   if (v.domainsOpen) overlays += domainSheet(v);
+  if (v.showTutorial) overlays += tutorialOverlay(v);
   if (v.toast) overlays += '<div style="position:absolute; bottom:78px; left:50%; transform:translateX(-50%); background:var(--dk,#073A2A); color:#FFF; font-family:\'Readex Pro\'; font-weight:600; font-size:13px; padding:11px 20px; border-radius:999px; z-index:70; box-shadow:0 12px 30px -10px rgba(11,23,18,.5); animation:lm-fade .2s ease; white-space:nowrap;">' + v.toast + '</div>';
   var nav = v.showNav ? bottomNav(v) : '';
 
@@ -1002,7 +1097,16 @@ var ACTIONS = {
   goOnboarding: function () { go('onboarding'); },
   setAuthLogin: function () { setState({ authMode: 'login' }); },
   setAuthSignup: function () { setState({ authMode: 'signup' }); },
-  submitAuth: function () { go('permission'); },
+  submitAuth: function () { go('phone'); },
+  goAuth: function () { setState({ screen: 'auth', domainsOpen: false, menuOpen: false }); },
+  goPhone: function () { setState({ screen: 'phone', domainsOpen: false, menuOpen: false }); },
+  phoneContinue: function () {
+    var inp = document.getElementById('lm-phone');
+    var val = inp && inp.value.trim() ? inp.value.trim() : '5X XXX XXXX';
+    setState({ phone: val, screen: 'otp' });
+  },
+  otpResend: function () { showToast(App.state.lang === 'ar' ? 'أرسلنا رمزًا جديدًا' : 'New code sent'); },
+  otpVerify: function () { go('permission'); },
   allowPerm: function () { go('connect'); },
   laterPerm: function () { go('connect'); },
   toggleSource: function (el) {
@@ -1012,7 +1116,12 @@ var ACTIONS = {
     setState({ connected: c });
   },
   connectContinue: function () { go('lock'); },
-  openApp: function () { go('home'); },
+  openApp: function () { setState({ screen: 'home', domainsOpen: false, menuOpen: false, showTutorial: true, tutorialStep: 0 }); },
+  openTutorial: function () { setState({ showTutorial: true, tutorialStep: 0, menuOpen: false }); },
+  tutNext: function () { setState({ tutorialStep: Math.min(App.state.tutorialStep + 1, 5) }); },
+  tutBack: function () { setState({ tutorialStep: Math.max(App.state.tutorialStep - 1, 0) }); },
+  tutSkip: function () { setState({ showTutorial: false }); },
+  tutDone: function () { setState({ showTutorial: false }); },
   openDetails: function () { setState({ screen: 'details', domainsOpen: false, menuOpen: false }); },
   openNotif: function () { setState({ screen: 'details', domainsOpen: false, menuOpen: false }); },
   openGroup: function (el) { setState({ domain: el.getAttribute('data-key'), screen: 'list', listFilter: 'all', domainsOpen: false, menuOpen: false }); },
@@ -1080,6 +1189,15 @@ document.getElementById('app').addEventListener('input', function (e) {
     App.state.searchQuery = el.value;
     var box = document.getElementById('lm-results');
     if (box) box.innerHTML = searchResultsHTML(el.value, App.state.searchScope);
+  }
+  // OTP: keep digits only and auto-advance to the next box
+  if (el && el.getAttribute && el.getAttribute('data-otp') !== null) {
+    el.value = el.value.replace(/[^0-9٠-٩]/g, '').slice(0, 1);
+    if (el.value) {
+      var idx = parseInt(el.getAttribute('data-otp'), 10);
+      var next = document.getElementById('lm-otp' + (idx + 1));
+      if (next) next.focus();
+    }
   }
   e.stopPropagation();
 });
