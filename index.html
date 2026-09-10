@@ -37,6 +37,7 @@ var App = {
     darkMode: false, push: true, sound: true, priorityOnly: false,
     authMode: 'login',
     connected: { banks: true, telecom: true, shop: true, delivery: false, health: true, travel: false },
+    searchQuery: '', searchScope: 'all', recentSearches: ['STC', '2,450'],
     toast: ''
   },
   _tt: null
@@ -135,6 +136,11 @@ var T = {
     lamhaToday:'لمحة اليوم', todaySub:'جمعنا إشعاراتك من ٦ مصادر ورتّبناها لك.', statNew:'الجديدة', statImportant:'المهمة', statUnread:'غير المقروءة',
     needsAttention:'يحتاج انتباهك', yourGroups:'مجموعاتك الذكية', groupsSub:'إشعاراتك مجمّعة حسب النوع', lastUpdate:'آخر تحديث', unreadWord:'غير مقروء', openGroupW:'فتح',
     searchCta:'بحث ذكي…', filterBtn:'فلترة', relatedNotifs:'إشعارات مرتبطة', originalContent:'الرسالة الأصلية', categoryW:'التصنيف',
+    searchHint:'اكتب اسم جهة، مبلغ، تاريخ أو كلمة…', recentSearches:'عمليات بحث سابقة', suggestions:'اقتراحات سريعة', clearW:'مسح',
+    scopeAll:'الكل', scopeSender:'المرسِل', scopeAmount:'مبلغ', scopeDate:'تاريخ', scopeUnread:'غير مقروء',
+    resultsCountW:'نتيجة', noResultsT:'لا نتائج مطابقة', noResultsS:'جرّب كلمة أخرى أو أحد الاقتراحات بالأعلى.', typeToSearch:'ابدأ الكتابة للبحث في كل إشعاراتك فورًا.',
+    sq1:'فاتورة STC', sq2:'٥٠٠', sq3:'موعد المستشفى', sq4:'رسالة البنك الأهلي', sq5:'أرامكس', sq6:'أمازون',
+    markRead:'تمّ الاطلاع', markUnread:'غير مقروء', pinW:'تثبيت', muteW:'كتم المرسِل', shareW:'مشاركة', openSrc:'فتح في التطبيق', archiveW:'أرشفة',
     search:'البحث', searchQuery:'رسائل البنك في أغسطس', smart:'بحث ذكي', saveSearch:'حفظ البحث', results18:'١٨ نتيجة',
     searchSummary:'وجدنا ١٨ إشعارًا من البنك الأهلي في أغسطس، مقسّمة كالتالي:', ops:'عمليات مالية', cardsW:'بطاقات', statementsW:'كشف حساب',
     resultsW:'النتائج', newestFirst:'الأحدث أولاً', iDep:'ت', depositRes:'تم إيداع مبلغ SAR 2,450', aug28:'٢٨ أغسطس', iCard:'ب', cardPurchase:'عملية شراء بالبطاقة', aug21:'٢١ أغسطس',
@@ -167,6 +173,11 @@ var T = {
     lamhaToday:'Your Lamha today', todaySub:'We gathered your alerts from 6 sources and organized them.', statNew:'New', statImportant:'Important', statUnread:'Unread',
     needsAttention:'Needs your attention', yourGroups:'Your smart groups', groupsSub:'Your alerts grouped by type', lastUpdate:'Last update', unreadWord:'unread', openGroupW:'Open',
     searchCta:'Smart search…', filterBtn:'Filter', relatedNotifs:'Related notifications', originalContent:'Original message', categoryW:'Category',
+    searchHint:'Type a sender, amount, date or word…', recentSearches:'Recent searches', suggestions:'Quick suggestions', clearW:'Clear',
+    scopeAll:'All', scopeSender:'Sender', scopeAmount:'Amount', scopeDate:'Date', scopeUnread:'Unread',
+    resultsCountW:'results', noResultsT:'No matching results', noResultsS:'Try another word or one of the suggestions above.', typeToSearch:'Start typing to search all your notifications instantly.',
+    sq1:'STC bill', sq2:'SAR 500', sq3:'Hospital appointment', sq4:'Al Ahli Bank', sq5:'Unread', sq6:'Amazon',
+    markRead:'Mark read', markUnread:'Mark unread', pinW:'Pin', muteW:'Mute sender', shareW:'Share', openSrc:'Open in app', archiveW:'Archive',
     search:'Search', searchQuery:'Bank messages in August', smart:'Smart search', saveSearch:'Save search', results18:'18 results',
     searchSummary:'We found 18 notifications from Al Ahli Bank in August, broken down as:', ops:'Transactions', cardsW:'Cards', statementsW:'Statements',
     resultsW:'Results', newestFirst:'Newest first', iDep:'D', depositRes:'Deposit of SAR 2,450', aug28:'28 Aug', iCard:'P', cardPurchase:'Card purchase', aug21:'21 Aug',
@@ -598,28 +609,122 @@ function screenHome(v) {
     + '</div></div>';
 }
 
+/* ---------------------- Smart search engine ----------------------- */
+function curPal() { return PALETTES.find(function (p) { return p.id === App.state.palette; }) || PALETTES[0]; }
+function dcolMap(pal) { return { all: pal.pr, banks: pal.pr, telecom: pal.mint, shop: pal.ac, delivery: pal.pr2, health: pal.ink, travel: pal.mint }; }
+function normQ(s) {
+  return ('' + (s == null ? '' : s)).toLowerCase().replace(/[٠-٩]/g, function (d) { return '٠١٢٣٤٥٦٧٨٩'.indexOf(d); }).trim();
+}
+function stripAr(tok) { return tok.replace(/^ال/, ''); } // drop leading Arabic definite article
+function escT(s) { return ('' + s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function tokenStems(tok) {
+  // light stemming: raw, article-stripped, and last-char trimmed (Arabic ة/ات/ك suffixes)
+  var out = [tok], st = stripAr(tok);
+  if (st !== tok) out.push(st);
+  if (tok.length >= 4) out.push(tok.slice(0, -1));
+  if (st !== tok && st.length >= 4) out.push(st.slice(0, -1));
+  return out.filter(function (x) { return x.length >= 2; });
+}
+function tokenIn(tok, field) {
+  if (!tok) return false;
+  if (/^\d+$/.test(tok)) return field.replace(/[^0-9]/g, '').indexOf(tok) !== -1;
+  var c = tokenStems(tok);
+  for (var i = 0; i < c.length; i++) { if (field.indexOf(c[i]) !== -1) return true; }
+  return false;
+}
+function hlt(text, q) {
+  text = '' + text; var raw = ('' + q).trim();
+  if (!raw) return escT(text);
+  var toks = normQ(raw).split(/\s+/).filter(Boolean).sort(function (a, b) { return b.length - a.length; });
+  var nt = normQ(text);
+  for (var k = 0; k < toks.length; k++) {
+    var cand = tokenStems(toks[k]);
+    for (var j = 0; j < cand.length; j++) {
+      if (cand[j].length < 2) continue;
+      var i = nt.indexOf(cand[j]);
+      if (i !== -1) {
+        var len = cand[j].length;
+        return escT(text.slice(0, i)) + '<mark style="background:var(--ac,#FFB020);color:#231708;border-radius:3px;padding:0 1px;">' + escT(text.slice(i, i + len)) + '</mark>' + escT(text.slice(i + len));
+      }
+    }
+  }
+  return escT(text);
+}
+function searchMatch(n, q, scope) {
+  var unread = n.read === false;
+  if (scope === 'unread' && !unread) return false;
+  var qn = normQ(q);
+  if (!qn) return true;
+  var senders = normQ((n.subAr || '') + ' ' + (n.subEn || ''));
+  var dates = normQ((n.tAr || '') + ' ' + (n.tEn || ''));
+  var hay = normQ([n.titleAr, n.titleEn, n.subAr, n.subEn, n.bodyAr, n.bodyEn, n.tAr, n.tEn].join(' '));
+  if (scope === 'amount') { var d = qn.replace(/\D/g, ''); return !!d && hay.replace(/[^0-9]/g, '').indexOf(d) !== -1; }
+  var field = scope === 'sender' ? senders : scope === 'date' ? dates : hay;
+  // natural-language: drop filler stopwords, then require every remaining token
+  var stop = { 'رسالة':1,'رسائل':1,'من':1,'في':1,'عن':1,'إشعار':1,'اشعار':1,'إشعارات':1,'message':1,'from':1,'the':1,'in':1,'my':1,'a':1,'for':1,'of':1 };
+  var toks = qn.split(/\s+/).filter(Boolean);
+  var meaningful = toks.filter(function (x) { return !stop[x]; });
+  if (meaningful.length) toks = meaningful;
+  return toks.every(function (tok) { return tokenIn(tok, field); });
+}
+function searchCard(n, q) {
+  var st = App.state, lang = st.lang, pal = curPal(), c = dcolMap(pal)[n.domains[1]] || pal.pr;
+  var urgent = n.bK === 'urgent', important = n.bK === 'important', worth = n.bK === 'worth', unread = n.read === false;
+  var avBg = urgent ? pal.ink : important ? pal.pr : worth ? pal.ac : softMix(c, 16);
+  var avColor = (urgent || important) ? '#FFF' : worth ? '#231708' : c;
+  var bg = urgent ? tintSurf(pal.ink, 15) : important ? tintSurf(pal.pr, 14) : worth ? tintSurf(pal.ac, 20) : tintSurf(c, 13);
+  var border = urgent ? tintSurf(pal.ink, 36) : important ? tintSurf(pal.pr, 34) : worth ? tintSurf(pal.ac, 44) : tintSurf(c, 30);
+  var title = n[lang === 'ar' ? 'titleAr' : 'titleEn'], sub = n[lang === 'ar' ? 'subAr' : 'subEn'], time = n[lang === 'ar' ? 'tAr' : 'tEn'] || '';
+  return '<button data-act="openNotif" data-id="' + n.id + '" style="text-align:start; border:1px solid ' + border + '; background:' + bg + '; border-radius:16px; padding:12px; display:flex; align-items:center; gap:11px; cursor:pointer; border-inline-start:3px solid ' + (unread ? pal.pr : c) + '; margin-bottom:8px;">'
+    + '<div style="width:38px;height:38px;border-radius:12px;background:' + avBg + ';color:' + avColor + ';display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">' + n[lang === 'ar' ? 'iAr' : 'iEn'] + '</div>'
+    + '<div style="flex:1; display:flex; flex-direction:column; gap:2px; min-width:0;"><span style="font-size:13px;font-weight:600;color:var(--txt,#10221B);">' + hlt(title, q) + '</span><span style="font-size:11px;color:var(--sub,#8A968F);">' + hlt(sub, q) + '</span></div>'
+    + '<span style="font-size:10px;color:var(--sub,#8A968F);flex-shrink:0;">' + time + '</span></button>';
+}
+function searchResultsHTML(q, scope) {
+  var lang = App.state.lang, t = T[lang];
+  if (!('' + q).trim() && scope === 'all') {
+    return '<div style="padding:34px 12px; text-align:center; color:var(--sub,#8A968F); font-size:13px; line-height:1.8;"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#B7C2BB" stroke-width="1.6" style="margin-bottom:8px;"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg><br>' + t.typeToSearch + '</div>';
+  }
+  var res = NOTIFS.filter(function (n) { return searchMatch(n, q, scope); });
+  if (res.length === 0) {
+    return '<div style="padding:26px 12px; display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center;"><div style="width:62px;height:62px;border-radius:18px;background:var(--surf,#FFF);display:flex;align-items:center;justify-content:center;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.6"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3M8 11h6"></path></svg></div><span style="font-family:\'Readex Pro\';font-weight:700;font-size:15px;color:var(--head,#073A2A);">' + t.noResultsT + '</span><span style="font-size:12px;color:var(--sub,#8A968F);line-height:1.7;">' + t.noResultsS + '</span></div>';
+  }
+  var head = '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;"><span style="font-family:\'Readex Pro\'; font-weight:600; font-size:14px; color:var(--head,#073A2A);">' + t.resultsW + '</span><span style="font-size:12px; color:var(--pr,#0F7A5A); font-weight:600;">' + toArabicNum(res.length) + ' ' + t.resultsCountW + '</span></div>';
+  return head + res.map(function (n) { return searchCard(n, q); }).join('');
+}
+
 function screenSearch(v) {
-  var t = v.t;
+  var t = v.t, st = App.state;
+  var scopes = [
+    { k: 'all', label: t.scopeAll }, { k: 'sender', label: t.scopeSender },
+    { k: 'amount', label: t.scopeAmount }, { k: 'date', label: t.scopeDate }, { k: 'unread', label: t.scopeUnread }
+  ];
+  var scopeChips = scopes.map(function (s) {
+    var on = st.searchScope === s.k;
+    return '<button data-act="setScope" data-scope="' + s.k + '" style="flex-shrink:0;border:1px solid ' + (on ? 'var(--pr,#0F7A5A)' : 'var(--line,#E4DCCB)') + ';background:' + (on ? 'var(--pr,#0F7A5A)' : 'var(--surf,#FFF)') + ';color:' + (on ? '#FFF' : 'var(--sub,#4A5B52)') + ';font-size:12px;font-weight:600;padding:7px 13px;border-radius:11px;cursor:pointer;font-family:\'Readex Pro\';">' + s.label + '</button>';
+  }).join('');
+  var sugg = [t.sq1, t.sq2, t.sq3, t.sq4, t.sq5, t.sq6].map(function (q) {
+    return '<button data-act="applySuggestion" data-q="' + esc(q) + '" style="flex-shrink:0;border:1px dashed var(--line,#CDBfa0);background:var(--surf,#FFF);color:var(--pr,#0F7A5A);font-size:12px;padding:7px 12px;border-radius:999px;cursor:pointer;font-family:\'IBM Plex Sans Arabic\';display:flex;align-items:center;gap:5px;"><span style="opacity:.7;">✦</span>' + q + '</button>';
+  }).join('');
+  var recent = (st.recentSearches || []).length
+    ? '<div style="display:flex; flex-direction:column; gap:8px;"><div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:12px; font-weight:600; color:var(--sub,#8A968F);">' + t.recentSearches + '</span><button data-act="clearRecent" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--pr,#0F7A5A);font-family:\'Readex Pro\';">' + t.clearW + '</button></div><div style="display:flex; flex-wrap:wrap; gap:7px;">'
+      + st.recentSearches.map(function (q) { return '<button data-act="applySuggestion" data-q="' + esc(q) + '" style="border:1px solid var(--line,#E4DCCB);background:var(--surf,#FFF);color:var(--txt,#10221B);font-size:12px;padding:6px 11px;border-radius:999px;cursor:pointer;font-family:\'IBM Plex Sans Arabic\';display:flex;align-items:center;gap:6px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9AA69F" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>' + q + '</button>'; }).join('')
+      + '</div></div>'
+    : '';
+  var hasQuery = ('' + st.searchQuery).trim() !== '';
+  var clearBtn = hasQuery ? '<button data-act="clearQuery" style="background:none;border:none;cursor:pointer;padding:0;display:flex;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9AA69F" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6M9 9l6 6"></path></svg></button>' : '';
   return '<div style="position:absolute; inset:0; display:flex; flex-direction:column; animation:lm-fade .3s ease;">'
     + '<div style="padding:0 18px 12px; display:flex; align-items:center; gap:12px; flex-shrink:0;"><button data-act="goHome" style="width:34px;height:34px;border-radius:11px;background:var(--surf,#FFF);border:1px solid var(--line,#E4DCCB);display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--txt,#10221B)" stroke-width="2" style="transform:scaleX(' + v.arrowFlip + ');"><path d="m9 18 6-6-6-6"></path></svg></button><span style="font-family:\'Readex Pro\'; font-weight:700; font-size:17px; color:var(--head,#073A2A);">' + t.search + '</span></div>'
-    + '<div style="padding:0 18px 12px; flex-shrink:0;"><div style="background:var(--surf,#FFF); border:1px solid var(--pr,#0F7A5A); border-radius:14px; height:48px; display:flex; align-items:center; padding:0 16px; gap:10px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg><input type="text" value="' + esc(t.searchQuery) + '" style="flex:1; border:none; outline:none; background:transparent; color:var(--txt,#10221B); font-family:\'IBM Plex Sans Arabic\'; font-size:14px;"></div></div>'
-    + '<div style="padding:0 18px 12px; display:flex; gap:8px; flex-shrink:0;">'
-    + '<button data-act="actSmart" style="background:var(--pr,#0F7A5A);color:#FFF;font-size:12px;font-weight:600;padding:8px 14px;border-radius:12px;border:none;cursor:pointer;font-family:\'Readex Pro\';">✦ ' + t.smart + '</button>'
-    + '<button data-act="openDomains" style="background:var(--surf,#FFF);color:var(--sub,#4A5B52);font-size:12px;padding:8px 14px;border-radius:12px;border:1px solid var(--line,#E4DCCB);cursor:pointer;font-family:\'Readex Pro\';">' + t.filter + '</button>'
-    + '<button data-act="actSaveSearch" style="background:var(--surf,#FFF);color:var(--sub,#4A5B52);font-size:12px;padding:8px 14px;border-radius:12px;border:1px solid var(--line,#E4DCCB);cursor:pointer;font-family:\'Readex Pro\';">' + t.saveSearch + '</button>'
-    + '</div>'
+    // live input
+    + '<div style="padding:0 18px 10px; flex-shrink:0;"><div style="background:var(--surf,#FFF); border:1.5px solid var(--pr,#0F7A5A); border-radius:14px; height:50px; display:flex; align-items:center; padding:0 14px; gap:10px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg><input id="lm-q" data-search type="text" value="' + esc(st.searchQuery) + '" placeholder="' + esc(t.searchHint) + '" style="flex:1; border:none; outline:none; background:transparent; color:var(--txt,#10221B); font-family:\'IBM Plex Sans Arabic\'; font-size:14px; min-width:0;">' + clearBtn + '</div></div>'
+    // scope chips
+    + '<div class="lm-scroll" style="padding:0 18px 10px; display:flex; gap:8px; flex-shrink:0; overflow-x:auto;">' + scopeChips + '</div>'
     + '<div class="lm-scroll" style="flex:1; overflow-y:auto; padding:0 18px 16px; display:flex; flex-direction:column; gap:14px;">'
-    + '<div style="background:var(--pr,#0F7A5A); border-radius:18px; padding:16px; display:flex; flex-direction:column; gap:12px;">'
-    + '<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:15px;">✦</span><span style="font-family:\'Readex Pro\'; font-weight:600; font-size:14px; color:#FFF;">' + t.brief + '</span><span style="margin-inline-start:auto; font-size:11px; color:#FFFFFF; opacity:.75;">' + t.results18 + '</span></div>'
-    + '<div style="font-size:13px; color:#FFFFFF; opacity:.92; line-height:1.7;">' + t.searchSummary + '</div>'
-    + '<div style="display:flex; gap:8px;">'
-    + '<div style="flex:1; background:rgba(255,255,255,.14); border-radius:12px; padding:10px; display:flex; flex-direction:column; gap:2px;"><span style="font-family:\'Readex Pro\'; font-weight:700; font-size:20px; color:#FFF;">' + t.n9 + '</span><span style="font-size:11px; color:#FFFFFF; opacity:.85;">' + t.ops + '</span></div>'
-    + '<div style="flex:1; background:rgba(255,255,255,.14); border-radius:12px; padding:10px; display:flex; flex-direction:column; gap:2px;"><span style="font-family:\'Readex Pro\'; font-weight:700; font-size:20px; color:#FFF;">' + t.n5 + '</span><span style="font-size:11px; color:#FFFFFF; opacity:.85;">' + t.cardsW + '</span></div>'
-    + '<div style="flex:1; background:rgba(255,255,255,.14); border-radius:12px; padding:10px; display:flex; flex-direction:column; gap:2px;"><span style="font-family:\'Readex Pro\'; font-weight:700; font-size:20px; color:var(--ac,#FFB020);">' + t.n2 + '</span><span style="font-size:11px; color:#FFFFFF; opacity:.85;">' + t.statementsW + '</span></div>'
-    + '</div></div>'
-    + '<div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-family:\'Readex Pro\'; font-weight:600; font-size:14px; color:var(--head,#073A2A);">' + t.resultsW + '</span><span style="font-size:12px; color:var(--pr,#0F7A5A); font-weight:500;">' + t.newestFirst + '</span></div>'
-    + '<button data-act="openDetails" style="text-align:start; border:none; background:var(--surf,#FFF); border-radius:16px; padding:11px; display:flex; align-items:center; gap:11px; cursor:pointer;"><div style="width:36px;height:36px;border-radius:12px;background:#EAF6EF;color:var(--pr,#0F7A5A);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">' + t.iDep + '</div><div style="flex:1; display:flex; flex-direction:column; gap:2px;"><span style="font-size:13px;font-weight:600;">' + t.depositRes + '</span><span style="font-size:11px;color:var(--sub,#8A968F);">' + t.aug28 + '</span></div></button>'
-    + '<button data-act="openDetails" style="text-align:start; border:none; background:var(--surf,#FFF); border-radius:16px; padding:11px; display:flex; align-items:center; gap:11px; cursor:pointer;"><div style="width:36px;height:36px;border-radius:12px;background:#FFF9EC;color:#B77A00;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">' + t.iCard + '</div><div style="flex:1; display:flex; flex-direction:column; gap:2px;"><span style="font-size:13px;font-weight:600;">' + t.cardPurchase + '</span><span style="font-size:11px;color:var(--sub,#8A968F);">' + t.aug21 + '</span></div></button>'
+    // suggestions
+    + '<div style="display:flex; flex-direction:column; gap:8px;"><span style="font-size:12px; font-weight:600; color:var(--sub,#8A968F);">' + t.suggestions + '</span><div class="lm-scroll" style="display:flex; gap:7px; overflow-x:auto; padding-bottom:2px;">' + sugg + '</div></div>'
+    + recent
+    // live results
+    + '<div id="lm-results">' + searchResultsHTML(st.searchQuery, st.searchScope) + '</div>'
     + '</div></div>';
 }
 
@@ -646,10 +751,12 @@ function screenDetails(v) {
     + '<button data-act="goThread" style="background:var(--pr,#0F7A5A); color:#FFF; border:none; height:50px; border-radius:15px; font-family:\'Readex Pro\'; font-weight:600; font-size:15px; cursor:pointer;">' + t.viewRelated + '</button>'
     + '<span style="font-family:\'Readex Pro\'; font-weight:600; font-size:14px; color:var(--head,#073A2A);">' + t.quickActions + '</span>'
     + '<div style="display:flex; gap:10px;">'
-    + '<button data-act="actSave" style="flex:1; background:var(--surf,#FFF); border:none; cursor:pointer; border-radius:14px; padding:14px 8px; display:flex; flex-direction:column; align-items:center; gap:7px; font-family:\'IBM Plex Sans Arabic\';"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.8"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><path d="M17 21v-8H7v8M7 3v5h8"></path></svg><span style="font-size:11px; color:var(--txt,#10221B);">' + t.saveInvoice + '</span></button>'
-    + '<button data-act="actPay" style="flex:1; background:var(--surf,#FFF); border:none; cursor:pointer; border-radius:14px; padding:14px 8px; display:flex; flex-direction:column; align-items:center; gap:7px; font-family:\'IBM Plex Sans Arabic\';"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 10h18"></path></svg><span style="font-size:11px; color:var(--txt,#10221B);">' + t.payBill + '</span></button>'
-    + '<button data-act="actTransfer" style="flex:1; background:var(--surf,#FFF); border:none; cursor:pointer; border-radius:14px; padding:14px 8px; display:flex; flex-direction:column; align-items:center; gap:7px; font-family:\'IBM Plex Sans Arabic\';"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.8"><path d="M4 12v8h16v-8M12 3v13M8 7l4-4 4 4"></path></svg><span style="font-size:11px; color:var(--txt,#10221B);">' + t.transfer + '</span></button>'
+    + '<button data-act="actMarkRead" style="flex:1; background:var(--surf,#FFF); border:1px solid var(--line,#EFE8DC); cursor:pointer; border-radius:14px; padding:13px 6px; display:flex; flex-direction:column; align-items:center; gap:7px; font-family:\'IBM Plex Sans Arabic\';"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.8"><path d="M18 6 7 17l-5-5"></path><path d="m22 10-7.5 7.5"></path></svg><span style="font-size:11px; color:var(--txt,#10221B);">' + t.markRead + '</span></button>'
+    + '<button data-act="actPin" style="flex:1; background:var(--surf,#FFF); border:1px solid var(--line,#EFE8DC); cursor:pointer; border-radius:14px; padding:13px 6px; display:flex; flex-direction:column; align-items:center; gap:7px; font-family:\'IBM Plex Sans Arabic\';"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.8"><path d="M12 17v5M9 3h6l-1 7 3 3H7l3-3z"></path></svg><span style="font-size:11px; color:var(--txt,#10221B);">' + t.pinW + '</span></button>'
+    + '<button data-act="actMute" style="flex:1; background:var(--surf,#FFF); border:1px solid var(--line,#EFE8DC); cursor:pointer; border-radius:14px; padding:13px 6px; display:flex; flex-direction:column; align-items:center; gap:7px; font-family:\'IBM Plex Sans Arabic\';"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.8"><path d="M18.6 8a6 6 0 0 0-11.6 0c0 7-3 9-3 9h13M10.3 21a1.94 1.94 0 0 0 3.4 0M2 2l20 20"></path></svg><span style="font-size:11px; color:var(--txt,#10221B);">' + t.muteW + '</span></button>'
+    + '<button data-act="actShare" style="flex:1; background:var(--surf,#FFF); border:1px solid var(--line,#EFE8DC); cursor:pointer; border-radius:14px; padding:13px 6px; display:flex; flex-direction:column; align-items:center; gap:7px; font-family:\'IBM Plex Sans Arabic\';"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.8"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><path d="m8.6 13.5 6.8 4M15.4 6.5 8.6 10.5"></path></svg><span style="font-size:11px; color:var(--txt,#10221B);">' + t.shareW + '</span></button>'
     + '</div>'
+    + '<button data-act="actOpenSrc" style="background:transparent; border:1px solid var(--line,#E4DCCB); color:var(--pr,#0F7A5A); height:46px; border-radius:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; font-family:\'Readex Pro\'; font-weight:600; font-size:13px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--pr,#0F7A5A)" stroke-width="1.9"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>' + t.openSrc + '</button>'
     // Related notifications from the same sender
     + '<span style="font-family:\'Readex Pro\'; font-weight:600; font-size:14px; color:var(--head,#073A2A); margin-top:2px;">' + t.relatedNotifs + '</span>'
     + v.related.map(notifCard).join('')
@@ -929,9 +1036,22 @@ var ACTIONS = {
   setListAll: function () { setState({ listFilter: 'all' }); },
   setListUnread: function () { setState({ listFilter: 'unread' }); },
   pickDomain: function (el) { setState({ domain: el.getAttribute('data-key') }); },
-  actSave: function () { showToast(App.state.lang === 'ar' ? 'تم حفظ الفاتورة' : 'Invoice saved'); },
-  actPay: function () { showToast(App.state.lang === 'ar' ? 'جارٍ فتح صفحة الدفع' : 'Opening payment'); },
-  actTransfer: function () { showToast(App.state.lang === 'ar' ? 'جارٍ تجهيز التحويل' : 'Preparing transfer'); },
+  // aggregator actions (Lamha organizes/retrieves — it does not transact)
+  actMarkRead: function () { showToast(App.state.lang === 'ar' ? 'تم التمييز كمقروء' : 'Marked as read'); },
+  actPin: function () { showToast(App.state.lang === 'ar' ? 'تم تثبيت الإشعار' : 'Notification pinned'); },
+  actMute: function () { showToast(App.state.lang === 'ar' ? 'تم كتم هذا المرسِل' : 'Sender muted'); },
+  actShare: function () { showToast(App.state.lang === 'ar' ? 'مشاركة الملخص…' : 'Sharing summary…'); },
+  actOpenSrc: function () { showToast(App.state.lang === 'ar' ? 'فتح في تطبيق المرسِل…' : 'Opening in source app…'); },
+  // smart search
+  setScope: function (el) { setState({ searchScope: el.getAttribute('data-scope') }); },
+  applySuggestion: function (el) {
+    var q = el.getAttribute('data-q');
+    var rec = (App.state.recentSearches || []).filter(function (x) { return x !== q; });
+    rec.unshift(q); rec = rec.slice(0, 5);
+    setState({ searchQuery: q, searchScope: 'all', recentSearches: rec });
+  },
+  clearQuery: function () { setState({ searchQuery: '' }); },
+  clearRecent: function () { setState({ recentSearches: [] }); },
   actSmart: function () { showToast(App.state.lang === 'ar' ? 'البحث الذكي مُفعّل' : 'Smart search on'); },
   actSaveSearch: function () { showToast(App.state.lang === 'ar' ? 'تم حفظ البحث' : 'Search saved'); },
   actForgot: function () { showToast(App.state.lang === 'ar' ? 'أرسلنا رابط استعادة كلمة المرور' : 'Reset link sent'); },
@@ -954,6 +1074,13 @@ document.getElementById('app').addEventListener('click', function (e) {
 /* Keep input values from being wiped on re-render: stop propagation
    so typing does not trigger delegated actions, and let inputs work. */
 document.getElementById('app').addEventListener('input', function (e) {
+  var el = e.target;
+  // Live smart search: update results in place, keep input focused (no full re-render)
+  if (el && el.getAttribute && el.getAttribute('data-search') !== null) {
+    App.state.searchQuery = el.value;
+    var box = document.getElementById('lm-results');
+    if (box) box.innerHTML = searchResultsHTML(el.value, App.state.searchScope);
+  }
   e.stopPropagation();
 });
 
